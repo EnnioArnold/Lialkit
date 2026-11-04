@@ -713,7 +713,11 @@ def run_vector_checks(appid: str, op: str, u, v, w,
     lit = lambda vec: "{" + ",".join(str(x) for x in vec.values) + "}"  # noqa: E731
     dim = len(u.values)
 
-    if op == "dot":
+    if op in ("laenge", "normieren"):
+        raise ValueError("Länge und Normieren lassen sich nicht exakt gegen "
+                         "Wolfram vergleichen (Wurzeln); die Skalarprodukt-"
+                         "Rechnung schon.")
+    if op in ("dot", "skalarprodukt"):
         query = f"Dot[{lit(u)},{lit(v)}]"
         report.url = browser_url(query)
         answers = _ask(appid, {"q": query})
@@ -2177,6 +2181,10 @@ VECTOR_OPS = {
     "Addition": "add",
     "Ortsvektor / Verbindung": "position",
     "Skalar · Vektor": "scale",
+    # SW 7 (hinten angehängt, damit die alten Einträge ihre Plätze behalten)
+    "Skalarprodukt mit Winkel und Projektion": "skalarprodukt",
+    "Länge (Norm)": "laenge",
+    "Normieren": "normieren",
 }
 
 
@@ -2969,6 +2977,7 @@ class VectorsPage(QWidget):
                 for row in self.values]
 
     def compute(self):
+        from lialkit.rechnen.skalarprodukt import laenge, normieren, skalarprodukt
         from lialkit.rechnen.vectors import (add, angle, cross, dot, position,
                                      projection, scale, spat)
         try:
@@ -2994,6 +3003,12 @@ class VectorsPage(QWidget):
                 result = spat(u, v, w, self.decimal)
             elif self.op == "angle":
                 result = angle(u, v)
+            elif self.op == "skalarprodukt":
+                result = skalarprodukt(u, v, self.decimal)
+            elif self.op == "laenge":
+                result = laenge(u, self.decimal)
+            elif self.op == "normieren":
+                result = normieren(u, self.decimal)
             else:
                 result = projection(u, v, self.decimal)
         except ValueError as exc:
@@ -3019,7 +3034,8 @@ class VectorsPage(QWidget):
         """
         from lialkit.rechnen.vectors import angle, dot, spat
 
-        if self.op in ("add", "position", "scale"):
+        if self.op in ("add", "position", "scale", "skalarprodukt", "laenge",
+                       "normieren"):
             return ("Für diese Rechnung gibt es keine Animation — "
                     "»Zeichnen« zeigt das Bild.")
         u, v, w = self.vectors()
@@ -3077,6 +3093,14 @@ class VectorsPage(QWidget):
                                       interactive=interactive)
         if self.op == "spat":
             return plots.plot_spat(u, v, w, interactive=interactive)
+        if self.op == "skalarprodukt" and self.dim == 2:
+            from lialkit.grafik.plots_projektion import plot_skalarprodukt
+            return plot_skalarprodukt(u, v)
+        if self.op == "laenge":
+            return plots.plot_vectors(u, labels=["a"], interactive=interactive)
+        if self.op == "normieren" and not u.is_zero():
+            return plots.plot_vectors(u, u.normalized(), labels=["a", "a⁰"],
+                                      interactive=interactive)
         if self.op == "cross":
             return plots.plot_vectors(u, v, u.cross(v),
                                       labels=["u", "v", "u \u00d7 v"],
@@ -3166,7 +3190,17 @@ MAP_TYPES = {
 }
 
 MAP_OPS = {"Abbilden": "apply", "Zusammensetzen": "compose",
-           "Aus Bildern ablesen": "read", "Transponierte": "transpose"}
+           "Aus Bildern ablesen": "read", "Transponierte": "transpose",
+           # SW 7
+           "Orthogonal prüfen": "orthogonal", "Um Zentrum": "center"}
+
+
+def parse_center(text: str):
+    """Ein Drehzentrum wie »2,3« oder »(2,3)« als Paar; ValueError, wenn es nicht zwei Zahlen sind."""
+    teile = [t for t in re.split(r"[,;\s]+", text.strip().strip("()")) if t]
+    if len(teile) != 2:
+        raise ValueError("Zentrum als zwei Zahlen eingeben, z. B. 2,3")
+    return parse_number(teile[0]), parse_number(teile[1])
 
 
 def parse_points(text: str):
@@ -3386,6 +3420,12 @@ class MapsPage(QWidget):
                                  "für ein geschlossenes Bild den ersten Punkt am Ende wiederholen.")
         self.pts_edit.textChanged.connect(self._input_changed)
         self.pts_edit.setVisible(False)
+        self.center_edit = QLineEdit("2,3")
+        self.center_edit.setObjectName("cell")
+        self.center_edit.setFont(FONTS.f(13))
+        self.center_edit.setToolTip("Zentrum (cx, cy): erst T(−c), dann A, dann T(c).")
+        self.center_edit.textChanged.connect(self._input_changed)
+        self.center_edit.setVisible(False)
         self.obj_row = QWidget()
         orow = QHBoxLayout(self.obj_row)
         orow.setContentsMargins(0, 0, 0, 0)
@@ -3397,6 +3437,7 @@ class MapsPage(QWidget):
         orow.addStretch(1)
         lay.addWidget(self.obj_row)
         lay.addWidget(self.pts_edit)
+        lay.addWidget(self.center_edit)
         self.lbl_err = label("", 11, "red", wrap=True)
         lay.addWidget(self.lbl_err)
 
@@ -3438,11 +3479,14 @@ class MapsPage(QWidget):
         self.drop_op.set_value(list(MAP_OPS)[index])
         self.slot_a.setVisible(self.op != "read")
         self.pts_edit.setVisible(self.op != "read" and self.obj == "own")
+        self.center_edit.setVisible(self.op == "center")
         self.slot_b.setVisible(self.op == "compose")
         self.read_box.setVisible(self.op == "read")
         self.obj_row.setVisible(self.op != "read")
         self.lbl_head.setText({"apply": "Abbildung A", "compose": "Zwei Abbildungen",
-                               "read": "Gegebenes Bild", "transpose": "Abbildung A und Aᵀ"}[self.op])
+                               "read": "Gegebenes Bild", "transpose": "Abbildung A und Aᵀ",
+                               "orthogonal": "Abbildung A prüfen",
+                               "center": "Abbildung A um das Zentrum c"}[self.op])
         self.lbl_note.setText({
             "apply": "Q = A·P: die Spalten von A sind die Bilder von e₁ und e₂, "
                      "die Punkte stehen spaltenweise in P.",
@@ -3452,7 +3496,12 @@ class MapsPage(QWidget):
                     "auf diese Punkte abbildet? Sonst: geht es mit homogenen "
                     "Koordinaten?",
             "transpose": "Die Zeilen von A sind die Spalten von Aᵀ. Die Zeichnung "
-                         "zeigt das Bild unter A (schwarz) und unter Aᵀ (gestrichelt)."}[self.op])
+                         "zeigt das Bild unter A (schwarz) und unter Aᵀ (gestrichelt).",
+            "orthogonal": "Orthogonal heisst längen- und winkeltreu: die Spalten sind "
+                          "normiert und stehen senkrecht, AᵀA = E, det A = ±1.",
+            "center": "A wirkt um das Zentrum c statt um den Ursprung: M = T(c)·A·T(−c) "
+                      "in homogenen Koordinaten. Mit Drehung als A ist das die Übung von "
+                      "Folie 23 (SW 7)."}[self.op])
         self.lbl_err.setText("")
         self.anim.refresh()
 
@@ -3498,6 +3547,13 @@ class MapsPage(QWidget):
             return ab.abbilden(A, self.points(), decimal=self.decimal)
         if self.op == "transpose":
             return ab.transponierte_abbildung(A, self.points(), decimal=self.decimal)
+        if self.op == "orthogonal":
+            from lialkit.rechnen.skalarprodukt import pruefe_orthogonal
+            return pruefe_orthogonal(A, decimal=self.decimal)
+        if self.op == "center":
+            from lialkit.rechnen.homogen_3d import abbildung_um_zentrum
+            return abbildung_um_zentrum(A, parse_center(self.center_edit.text()),
+                                        self.points(), decimal=self.decimal)
         return ab.zusammensetzen(A, self.slot_b.matrix(), namen=("A", "B"),
                                  P=self.points(), decimal=self.decimal)
 
@@ -3518,8 +3574,11 @@ class MapsPage(QWidget):
         """(Matrix, Punkte, Titel) für Zeichnung und Film, oder ein Text, warum nichts da ist."""
         from lialkit.rechnen import abbildung as ab
 
-        if self.op in ("apply", "transpose"):
+        if self.op in ("apply", "transpose", "orthogonal"):
             return self.slot_a.matrix(), self.points(True), "Q = A·P"
+        if self.op == "center":
+            return (self.result().matrix, self.points(True),
+                    "M = T(c)·A·T(−c)")
         if self.op == "compose":
             C = ab.zusammensetzen(self.slot_a.matrix(),
                                   self.slot_b.matrix()).matrix
@@ -3537,7 +3596,8 @@ class MapsPage(QWidget):
         return (self.op, self.obj, self.slot_a.state(),
                 self.slot_b.state() if self.op == "compose" else None,
                 tuple(map(tuple, self.q_vals)) if self.op == "read" else None,
-                self.pts_edit.text() if self.obj == "own" else None)
+                self.pts_edit.text() if self.obj == "own" else None,
+                self.center_edit.text() if self.op == "center" else None)
 
     def build_job(self, _scene: str, quality: str):
         got = self.matrix_to_draw()
@@ -3573,6 +3633,175 @@ class MapsPage(QWidget):
                     + (" Das Bild unter Aᵀ ist gestrichelt." if self.op == "transpose" else ""))
             except Exception as exc:
                 self.plot.show_message(f"Zeichnen ging nicht: {exc}")
+        show_view(self, 1)
+
+    def restyle(self):
+        for card in (self.card_input, self.card_op, self.card_out):
+            card.restyle()
+        self.view._placeholder("Nach dem Themawechsel neu rechnen.")
+        self.plot.restyle()
+        self.anim.restyle()
+
+
+# ==========================================================================
+# Reiter: Regression (SW 8)
+# ==========================================================================
+
+REGRESSION_OPS = {"Regressionsgerade": "fit", "Projektionsmatrix": "proj"}
+
+
+def parse_data_points(text: str):
+    """Datenpunkte wie »(0,6) (1,0) (2,0)« als Paare; ValueError bei weniger als zwei lesbaren Punkten."""
+    try:
+        return parse_points(text)
+    except ValueError:
+        raise ValueError("Mindestens zwei Datenpunkte eingeben, z. B. (0,6) (1,0) (2,0)") from None
+
+
+class RegressionPage(QWidget):
+    """Einfache lineare Regression und Projektion auf den Spaltenraum (SW 8)."""
+
+    def __init__(self, window, parent=None):
+        super().__init__(parent)
+        self.setObjectName("page")
+        self.window = window
+        self.op = "fit"
+        self.decimal = False
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(32, 26, 32, 30)
+        outer.setSpacing(0)
+        outer.addWidget(label("Regression", 26, weight=QFont.Bold, display=True))
+        outer.addWidget(label("Die beste Gerade durch Messpunkte als orthogonale "
+                              "Projektion auf den Spaltenraum — mit Rechenweg und "
+                              "Zeichnung.", 13, "sec", display=True, wrap=True))
+        outer.addSpacing(20)
+        columns = QHBoxLayout()
+        columns.setSpacing(20)
+        outer.addLayout(columns, 1)
+        left = QVBoxLayout()
+        left.setSpacing(18)
+        columns.addLayout(left, 2)
+        right = QVBoxLayout()
+        right.setSpacing(18)
+        columns.addLayout(right, 3)
+
+        self.card_input = Card()
+        left.addWidget(self.card_input)
+        lay = self.card_input.lay
+        lay.addWidget(label("Datenpunkte (t, b)", 15, weight=QFont.DemiBold))
+        lay.addWidget(label("Zum Beispiel das Alter t und der Blutdruck b.", 11,
+                            "sec", wrap=True))
+        lay.addSpacing(10)
+        self.pts_edit = QLineEdit("(0,6) (1,0) (2,0)")
+        self.pts_edit.setObjectName("cell")
+        self.pts_edit.setFont(FONTS.f(13))
+        self.pts_edit.setToolTip("Punkte als (t,b), durch Leerzeichen getrennt.")
+        self.pts_edit.textChanged.connect(self._input_changed)
+        lay.addWidget(self.pts_edit)
+        lay.addSpacing(10)
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        row.addWidget(label("Vorhersage bei t =", 11, "sec"))
+        self.t_edit = QLineEdit("3")
+        self.t_edit.setObjectName("cell")
+        self.t_edit.setAlignment(Qt.AlignCenter)
+        self.t_edit.setFont(FONTS.f(13))
+        self.t_edit.setFixedSize(58, 34)
+        row.addWidget(self.t_edit)
+        row.addStretch(1)
+        lay.addLayout(row)
+        self.lbl_err = label("", 11, "red", wrap=True)
+        lay.addWidget(self.lbl_err)
+        self.lbl_pred = label("", 11, "sec", wrap=True)
+        lay.addWidget(self.lbl_pred)
+
+        self.card_op = Card()
+        left.addWidget(self.card_op)
+        olay = self.card_op.lay
+        olay.addWidget(label("Rechnung", 15, weight=QFont.DemiBold))
+        olay.addSpacing(12)
+        self.drop_op = Dropdown(list(REGRESSION_OPS), value="Regressionsgerade")
+        self.drop_op.picked.connect(self.set_op)
+        olay.addWidget(self.drop_op)
+        olay.addSpacing(12)
+        brow = QHBoxLayout()
+        brow.setSpacing(8)
+        brow.addWidget(pill("Rechnen", "primary", self.compute))
+        brow.addWidget(pill("Zeichnen", "secondary", self.draw, small=True))
+        brow.addStretch(1)
+        olay.addLayout(brow)
+        olay.addSpacing(8)
+        self.lbl_note = label("", 10, "ter", wrap=True)
+        olay.addWidget(self.lbl_note)
+        left.addStretch(1)
+
+        output_card(self, right)
+        self.set_op("Regressionsgerade")
+
+    def _input_changed(self):
+        self.anim.refresh()
+
+    def set_op(self, name: str):
+        self.op = REGRESSION_OPS[name]
+        self.drop_op.set_value(name)
+        self.lbl_note.setText({
+            "fit": "Gesucht ist b = C + D·t. Das System A·(C, D) = b hat keine Lösung; "
+                   "die beste ist x̂ = (AᵀA)⁻¹Aᵀb, die Projektion von b auf C(A).",
+            "proj": "P = A(AᵀA)⁻¹Aᵀ projiziert jeden Vektor b auf den Spaltenraum der "
+                    "Datenmatrix A mit den Zeilen (1, tᵢ)."}[self.op])
+        self.anim.refresh()
+
+    def result(self):
+        """Das Ergebnis der gewählten Rechnung (wirft ValueError)."""
+        from lialkit.rechnen.regression import projektionsmatrix, regression
+
+        pts = parse_data_points(self.pts_edit.text())
+        if self.op == "proj":
+            return projektionsmatrix([[1, t] for t, _ in pts], decimal=self.decimal)
+        return regression(pts, decimal=self.decimal)
+
+    def compute(self):
+        try:
+            result = self.result()
+            extra = ""
+            if self.op == "fit":
+                t = parse_number(self.t_edit.text())
+                extra = f"Vorhersage bei t = {fmt(t)}: b = {fmt(result.vorhersage(t), self.decimal)}"
+        except ValueError as exc:
+            self.lbl_err.setText(str(exc))
+            self.lbl_pred.setText("")
+            self.view.show_error(str(exc))
+            show_view(self, 0)
+            return
+        self.lbl_err.setText("")
+        self.lbl_pred.setText(extra)
+        self.view.show_result(result, self.decimal)
+        show_view(self, 0)
+
+    def anim_key(self):
+        return (self.op, self.pts_edit.text())
+
+    def build_job(self, _scene: str, _quality: str):
+        return ("Für die Regression gibt es noch keine Animation — "
+                "»Zeichnen« zeigt Gerade, Fehler und Spaltenraum.")
+
+    def draw(self):
+        from lialkit.grafik.plots_projektion import plot_regression
+
+        try:
+            pts = parse_data_points(self.pts_edit.text())
+            self.lbl_err.setText("")
+            if not PlotCanvas.available():
+                self.plot.show_message("Zum Zeichnen fehlt Matplotlib. "
+                                       "Mit »pip install matplotlib« nachinstallieren.")
+            else:
+                self.plot.show_figure(
+                    plot_regression(pts),
+                    "Daten in Rot, Gerade in Schwarz, Fehler gestrichelt."
+                    + (" Rechts: b, die Ebene C(A) und die Projektion p." if len(pts) == 3 else ""))
+        except Exception as exc:
+            self.plot.show_message(f"Zeichnen ging nicht: {exc}")
         show_view(self, 1)
 
     def restyle(self):
@@ -3711,7 +3940,7 @@ class MapsHelpDialog(HelpDialog):
     """Hilfe der Seite »Abbildungen«."""
 
     TITLE = "Lineare Abbildungen"
-    HEADING = "Die vier Rechnungen"
+    HEADING = "Die Rechnungen"
     INTRO = ("Eine lineare Abbildung der Ebene ist eine 2×2-Matrix A. Ihre "
              "Spalten sind die Bilder der Einheitsvektoren e₁ und e₂ — mehr "
              "braucht es nicht, um jeden Punkt abzubilden.")
@@ -3735,6 +3964,14 @@ class MapsHelpDialog(HelpDialog):
          "Wird der Nullpunkt nicht auf sich selbst abgebildet, gibt es keine "
          "lineare Abbildung; ist das Bild ein Parallelogramm, geht es "
          "trotzdem mit einer 3×3-Matrix in homogenen Koordinaten."),
+        ("Orthogonal prüfen", "AᵀA = E",
+         "Orthogonale Abbildungen erhalten Längen und Winkel: die Spalten sind "
+         "auf 1 normiert und stehen paarweise senkrecht, A⁻¹ = Aᵀ und det A = ±1. "
+         "Drehungen haben det = 1, Spiegelungen det = −1."),
+        ("Um Zentrum", "M = T(c)·A·T(−c)",
+         "Eine Abbildung um das Zentrum c statt um den Ursprung: erst c in den "
+         "Ursprung schieben, A anwenden, zurückschieben. Das geht nur in "
+         "homogenen Koordinaten; als A eine Drehung gibt die Übung von Folie 23."),
     ]
     FOOT_HEADING = "Zeichnung und Animation"
     FOOT = [
@@ -3743,6 +3980,31 @@ class MapsHelpDialog(HelpDialog):
         "der Identität zu A.",
         "Einträge wie cos 30° sind irrational und erscheinen auf vier "
         "Stellen gerundet."]
+
+
+class RegressionHelpDialog(HelpDialog):
+    """Hilfe der Seite »Regression«."""
+
+    TITLE = "Lineare Regression"
+    HEADING = "Die beste Gerade"
+    INTRO = ("Messpunkte liegen selten genau auf einer Geraden, darum hat "
+             "A·x = b keine Lösung. Die beste Näherung macht den Fehler e = b − Ax "
+             "so klein wie möglich: Ax̂ ist die orthogonale Projektion von b auf "
+             "den Spaltenraum von A.")
+    SECTIONS = [
+        ("Regressionsgerade", "x̂ = (AᵀA)⁻¹Aᵀb",
+         "A hat die Zeilen (1, tᵢ), x̂ = (C, D) gehört zur Geraden b = C + D·t. "
+         "Der Fehler e steht senkrecht auf beiden Spalten (Aᵀe = 0); SQR = ‖e‖² "
+         "ist die Summe der Fehlerquadrate."),
+        ("Projektionsmatrix", "P = A(AᵀA)⁻¹Aᵀ",
+         "Pb ist die Projektion von b auf den Spaltenraum. Vektoren im Spaltenraum "
+         "bleiben fest (Pb = b), Vektoren senkrecht dazu werden zu 0; P² = P und "
+         "Pᵀ = P."),
+    ]
+    FOOT_HEADING = "Wann gibt es eine Lösung?"
+    FOOT = ["AᵀA ist genau dann invertierbar, wenn die Spalten von A linear "
+            "unabhängig sind. Bei der Geraden heisst das: mindestens zwei "
+            "verschiedene t-Werte."]
 
 
 class AppIDDialog(QDialog):
@@ -4127,7 +4389,8 @@ class MainWindow(QMainWindow):
         self.brand = label("lialkit", 13, weight=QFont.DemiBold)
         nav_lay.addWidget(self.brand)
         nav_lay.addSpacing(18)
-        self.seg_page = Segmented(["Gauss", "Verfahren", "Vektoren", "Abbildungen"],
+        self.seg_page = Segmented(["Gauss", "Verfahren", "Vektoren", "Abbildungen",
+                                   "Regression"],
                                   0, seg_width=96)
         self.seg_page.changed.connect(self.set_page)
         nav_lay.addWidget(self.seg_page)
@@ -4197,7 +4460,9 @@ class MainWindow(QMainWindow):
         self.page_methods = MethodsPage(self)
         self.page_vectors = VectorsPage(self)
         self.page_maps = MapsPage(self)
-        for page in (self.page_methods, self.page_vectors, self.page_maps):
+        self.page_regression = RegressionPage(self)
+        for page in (self.page_methods, self.page_vectors, self.page_maps,
+                     self.page_regression):
             holder = QScrollArea()
             holder.setObjectName("page")
             holder.setWidgetResizable(True)
@@ -4582,7 +4847,7 @@ class MainWindow(QMainWindow):
             card.restyle()
         if self.anim_ready:
             self.player.restyle()
-        for name in ("page_methods", "page_vectors", "page_maps"):
+        for name in ("page_methods", "page_vectors", "page_maps", "page_regression"):
             page = getattr(self, name, None)
             if page is not None:
                 page.restyle()
@@ -4592,7 +4857,7 @@ class MainWindow(QMainWindow):
 
     def set_page(self, index: int):
         """
-        Zwischen Gauss, Verfahren, Vektoren und Abbildungen umschalten.
+        Zwischen Gauss, Verfahren, Vektoren, Abbildungen und Regression umschalten.
 
         Gauss gegen Gauss-Jordan betrifft nur die erste Seite; auf den
         anderen bleibt die Leiste stehen, aber blass und stumm.
@@ -4858,7 +5123,8 @@ class MainWindow(QMainWindow):
         WalkthroughDialog(self, self.matrix, self.decimal).exec()
 
     def show_help(self):
-        (MapsHelpDialog if self.stack.currentIndex() == 3 else HelpDialog)(self).exec()
+        dialog = {3: MapsHelpDialog, 4: RegressionHelpDialog}.get(self.stack.currentIndex(), HelpDialog)
+        dialog(self).exec()
 
     def build_op(self) -> tuple[Operation | None, str]:
         if self.op_kind == "swap":
@@ -5109,7 +5375,8 @@ class MainWindow(QMainWindow):
             self.player.stop()
         if self.anim_dir is not None:
             shutil.rmtree(self.anim_dir, ignore_errors=True)
-        for page in (self.page_methods, self.page_vectors, self.page_maps):
+        for page in (self.page_methods, self.page_vectors, self.page_maps,
+                     self.page_regression):
             page.anim.shutdown()
         super().closeEvent(event)
 

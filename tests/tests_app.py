@@ -6,6 +6,7 @@ Läuft mit QT_QPA_PLATFORM=offscreen und braucht kein Netz. Ohne PySide6 wird
 übersprungen (SKIP, Exit-Code 0).
 """
 import os
+from fractions import Fraction
 import sys
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
@@ -174,6 +175,81 @@ def test_maps_week6():
         page.pts_edit.setText("kaputt")
         page.compute()                                    # Fehlertext statt Absturz
         assert page.lbl_err.text()
+    finally:
+        w.close()
+        w.deleteLater()
+
+
+def test_week7_8():
+    """SW7: Vektoren-Rechnungen, Abbildungen (orthogonal, um Zentrum); SW8: Seite »Regression«."""
+    w = Q.MainWindow()
+    try:
+        w.resize(1240, 900)
+        w.show()
+        # Navigation: neue Seite hinten, die alten Indizes bleiben
+        assert w.stack.count() == 5
+
+        # Vektoren: Skalarprodukt mit allem, Länge, Normieren
+        w.set_page(2)
+        v = w.page_vectors
+        assert list(Q.VECTOR_OPS)[:8] == ["Skalarprodukt", "Vektorprodukt", "Spatprodukt", "Winkel",
+                                          "Projektion", "Addition", "Ortsvektor / Verbindung", "Skalar · Vektor"]
+        v.set_dim(0)                                         # zwei Einträge
+        v.fields[0][0].setText("4"); v.fields[0][1].setText("3")
+        v.fields[1][0].setText("1"); v.fields[1][1].setText("5")
+        for name, key in (("Länge (Norm)", "laenge"), ("Normieren", "normieren"),
+                          ("Skalarprodukt mit Winkel und Projektion", "skalarprodukt")):
+            v.set_op(name)
+            assert v.op == key
+            v.compute()
+            assert v.figure(False) is not None
+            assert isinstance(v.build_job("full", "Schnell"), str)      # ohne Animation, mit Erklärung
+        # Abbildungen: Orthogonal prüfen und Um Zentrum
+        w.set_page(3)
+        m = w.page_maps
+        assert list(Q.MAP_OPS)[:4] == ["Abbilden", "Zusammensetzen", "Aus Bildern ablesen", "Transponierte"]
+        assert Q.parse_center("(2, 3)") == (2, 3) and Q.parse_center("2,3") == (2, 3)
+        try:
+            Q.parse_center("2")
+            raise AssertionError("parse_center hätte scheitern müssen")
+        except ValueError:
+            pass
+        m.slot_a.set_type("Drehung")
+        m.slot_a.vals["Drehung"] = ["90"]
+        m.slot_a._build()
+        m.set_op(list(Q.MAP_OPS.values()).index("orthogonal"))
+        assert bool(m.result()) and "Drehung" in m.result().art
+        m.set_op(list(Q.MAP_OPS.values()).index("center"))
+        m.center_edit.setText("2,3")
+        m.set_obj(1)                                         # Buchstabe F
+        assert m.result().matrix.rows == [[0, -1, 5], [1, 0, 1], [0, 0, 1]]
+        m.compute()
+        m.draw()
+        assert m.plot.figure is not None
+        m.center_edit.setText("x")
+        m.compute()
+        assert m.lbl_err.text()
+
+        # Regression
+        w.set_page(4)
+        r = w.page_regression
+        r.compute()
+        assert r.result().C == 5 and r.result().D == -3
+        assert "-4" in r.lbl_pred.text().replace("\u2212", "-")     # Vorhersage bei t = 3
+        r.draw()
+        assert r.plot.figure is not None
+        r.set_op("Projektionsmatrix")
+        r.compute()
+        assert r.result().P.rows[0][0] == Fraction(5, 6)
+        assert isinstance(r.build_job("full", "Schnell"), str)
+        r.pts_edit.setText("(1,2) (1,5)")                    # gleiche t: keine eindeutige Lösung
+        r.compute()
+        assert r.lbl_err.text()
+        r.pts_edit.setText("nix")
+        r.compute()
+        assert r.lbl_err.text()
+        w.set_theme(1)                                       # restyle aller Seiten
+        w.set_theme(0)
     finally:
         w.close()
         w.deleteLater()
