@@ -76,6 +76,7 @@ from .grafik.plots import (plot_line, plot_plane, plot_spat, plot_transformation
                     plot_vectors, has_plotly)
 from .grafik.plots_abbildung import (plot_abbildung, plot_basiswechsel,
                                      plot_rotationsreihe)
+from .grafik.plots_projektion import plot_regression, plot_skalarprodukt
 
 # Die Module liegen in Unterordnern; die alten Namen (lialkit.core, lialkit.anim,
 # lialkit.exercises, …) bleiben als Alias erhalten, damit Notebooks weiter laufen.
@@ -89,6 +90,7 @@ for _alias, _real in (("core", "rechnen.core"), ("render", "rechnen.render"),
                       ("skalarprodukt", "rechnen.skalarprodukt"),
                       ("homogen_3d", "rechnen.homogen_3d"),
                       ("regression", "rechnen.regression"),
+                      ("plots_projektion", "grafik.plots_projektion"),
                       ("plots_abbildung", "grafik.plots_abbildung"), ("exercises", "aufgaben.exercises"),
                       ("uebung", "aufgaben.uebung")):
     _m = _il.import_module(f"{__name__}.{_real}")
@@ -138,7 +140,7 @@ __all__ = [
     "regression", "kleinste_quadrate", "projektionsmatrix",
     "RegressionResult", "KleinsteQuadrateResult", "ProjektionsmatrixResult",
     # Zeichnen
-    "plot_abbildung", "plot_basiswechsel", "plot_rotationsreihe",
+    "plot_skalarprodukt", "plot_regression", "plot_abbildung", "plot_basiswechsel", "plot_rotationsreihe",
     "plot_vectors", "plot_spat", "plot_line", "plot_plane",
     "plot_transformation", "has_plotly",
     # Darstellung
@@ -169,6 +171,7 @@ def info() -> str:
         "Zeichnen:",
         "  plot_vectors, plot_spat, plot_line, plot_plane, plot_transformation",
         "  plot_abbildung, plot_basiswechsel, plot_rotationsreihe",
+        "  plot_skalarprodukt (SW 7), plot_regression (SW 8)",
         f"  Plotly für Räumliches: {'vorhanden' if has_plotly() else 'fehlt'}",
         "",
         "Jedes Ergebnis kennt .as_decimal(), .as_exact(), .latex() und .show().",

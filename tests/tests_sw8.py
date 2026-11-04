@@ -11,6 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import lialkit as lk
+from lialkit.grafik.plots_projektion import plot_regression
 from lialkit.rechnen.core import Matrix, Vector
 from lialkit.rechnen.regression import kleinste_quadrate, projektionsmatrix, regression
 
@@ -91,7 +92,14 @@ for _ in range(10):                                   # Normalgleichung und Mini
         e2 = Vector([y - (g.C + dc + (g.D + dd) * t) for t, y in zip(ts, ys)])
         check(e2.norm_squared() > g.sqr, "jede andere Gerade hat grösseren Fehler")
 
-print("Export")
+print("Zeichnung und Export")
+with tempfile.TemporaryDirectory() as tmp:
+    for name, daten in (("drei", [(0, 6), (1, 0), (2, 0)]), ("vier", [(0, 1), (1, 3), (2, 4), (3, 8)])):
+        fig = plot_regression(daten)
+        path = os.path.join(tmp, name + ".png")
+        fig.savefig(path, dpi=50)
+        check(os.path.getsize(path) > 2000, f"PNG {name} leer")
+        check(len(fig.axes) == (2 if name == "drei" else 1), f"{name}: Achsen")
 check(lk.regression is regression and "regression" in lk.info(), "Export und info()")
 
 print()

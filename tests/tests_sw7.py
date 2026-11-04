@@ -10,6 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import lialkit as lk
+from lialkit.grafik.plots_projektion import plot_skalarprodukt
 from lialkit.rechnen.abbildung import (BUCHSTABE_F_FOLIEN, drehung, homogen, scherung,
                                        skalierung, spiegelung_x, verschiebung, zusammensetzen)
 from lialkit.rechnen.core import Matrix, Vector
@@ -132,6 +133,7 @@ except ValueError:
     pass
 
 print("Zeichnung")
+check(plot_skalarprodukt([4, 3], [1, 5]) is not None, "plot_skalarprodukt")
 check(lk.plot_abbildung(d.matrix, BUCHSTABE_F_FOLIEN) is not None, "Drehung um Zentrum zeichnen")
 check("skalarprodukt" in lk.info() and lk.skalarprodukt is skalarprodukt, "Export und info()")
 
