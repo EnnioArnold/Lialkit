@@ -15,7 +15,7 @@ from lialkit.grafik.plots_projektion import plot_skalarprodukt
 from lialkit.rechnen.abbildung import (BUCHSTABE_F_FOLIEN, drehung, homogen, scherung,
                                        skalierung, spiegelung_x, verschiebung, zusammensetzen)
 from lialkit.rechnen.core import Matrix, Vector
-from lialkit.rechnen.homogen_3d import drehung_3d, drehung_um_zentrum, verschiebung_3d
+from lialkit.rechnen.homogen_3d import drehung_3d, abbildung_um_zentrum, drehung_um_zentrum, verschiebung_3d
 from lialkit.rechnen.skalarprodukt import (laenge, normieren, pruefe_orthogonal,
                                            senkrechter_vektor, skalarprodukt)
 
@@ -112,6 +112,9 @@ check(drehung_um_zentrum(360, (2, 3)).matrix.rows == Matrix.identity(3).rows, "3
 dp = drehung_um_zentrum(30, (2, 3), BUCHSTABE_F_FOLIEN)
 check(abs(float(dp.matrix[0, 2]) - (2 - (2 * 3 ** 0.5 / 2 - 3 * 0.5))) < 1e-6, "30°: Verschiebungsanteil")
 check("Probe" in dp.steps[-3].title or dp.latex(), "Rechenweg")
+sx = abbildung_um_zentrum(spiegelung_x(), (2, 3))      # Spiegelung an der Geraden y = 3
+check(vec((sx.matrix @ Matrix([[2], [5], [1]])).rows) == [2, 1, 1], "Spiegelung an y = 3: (2,5) -> (2,1)")
+check(abbildung_um_zentrum(drehung(90), (2, 3)).matrix.rows == d.matrix.rows, "A = Drehung gibt dasselbe")
 check(len(d.steps) >= 5 and "Zentrum" in d.steps[-1].title, "Schritte")
 
 print("Homogene Koordinaten 3D (Folien 25, 26)")

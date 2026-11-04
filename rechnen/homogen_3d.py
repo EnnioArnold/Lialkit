@@ -48,29 +48,43 @@ def verschiebung_3d(u, v, w) -> Matrix:
     return Matrix([[1, 0, 0, u], [0, 1, 0, v], [0, 0, 1, w], [0, 0, 0, 1]])
 
 
-def drehung_um_zentrum(winkel_grad, zentrum=ZENTRUM_FOLIE_23, P=None,
-                       decimal: bool = False) -> ZusammensetzungResult:
+def abbildung_um_zentrum(A, zentrum=ZENTRUM_FOLIE_23, P=None, namen=("T(-c)", "A", "T(c)"),
+                         decimal: bool = False) -> ZusammensetzungResult:
     """
-    Drehung um das Zentrum c statt um den Ursprung (Übung Folie 23).
+    Eine 2×2-Abbildung A (Drehung, Spiegelung, Skalierung, …) um das Zentrum c
+    statt um den Ursprung: M = T(c)·A·T(−c), wie in der Übung von Folie 23.
 
-    Rechenweg: T(−c) schiebt c in den Ursprung, Rot(φ) dreht, T(c) schiebt
-    zurück; die Gesamtmatrix ist T(c)·Rot(φ)·T(−c), das Zentrum bleibt fest.
-    P sind die Punkte spaltenweise (Standard: der Buchstabe F von Folie 23,
-    ohne die Zeile mit den Einsen; sie wird ergänzt). `.matrix` ist die 3×3-Matrix.
+    Rechenweg: T(−c) schiebt c in den Ursprung, A wirkt, T(c) schiebt zurück;
+    das Zentrum bleibt fest. P sind die Punkte spaltenweise (Standard: der
+    Buchstabe F von Folie 23; die Zeile mit den Einsen wird ergänzt).
+    `.matrix` ist die 3×3-Matrix in homogenen Koordinaten.
     """
     cx, cy = parse_number(zentrum[0]), parse_number(zentrum[1])
     P = BUCHSTABE_F_FOLIEN if P is None else punkte(P)
     P = homogen_punkte(P) if P.m == 2 else P
-    out = zusammensetzen(verschiebung(-cx, -cy), homogen(drehung(winkel_grad)),
-                         verschiebung(cx, cy),
-                         namen=("T(-c)", "R", "T(c)"), P=P, decimal=decimal)
-    out.title = "Drehung um ein beliebiges Zentrum"
-    out.summary = ("M = T(c)·R·T(−c): erst das Zentrum in den Ursprung, dann "
-                   "drehen, dann zurückschieben.")
+    out = zusammensetzen(verschiebung(-cx, -cy), homogen(A), verschiebung(cx, cy),
+                         namen=namen, P=P, decimal=decimal)
+    out.title = "Abbildung um ein beliebiges Zentrum"
+    out.summary = ("M = T(c)·A·T(−c): erst das Zentrum in den Ursprung, dann "
+                   "abbilden, dann zurückschieben.")
     out.zentrum = (cx, cy)
     out.steps.append(Step(
         "Das Zentrum bleibt fest",
         detail=r"M \cdot (c_x, c_y, 1)^T = (c_x, c_y, 1)^T",
         items=[("M\\,c", out.matrix @ Matrix([[cx], [cy], [1]]))],
-        note="Probe: der Fixpunkt der Drehung ist das Zentrum."))
+        note="Probe: der Fixpunkt ist das Zentrum."))
+    return out
+
+
+def drehung_um_zentrum(winkel_grad, zentrum=ZENTRUM_FOLIE_23, P=None,
+                       decimal: bool = False) -> ZusammensetzungResult:
+    """
+    Drehung um das Zentrum c statt um den Ursprung (Übung Folie 23):
+    M = T(c)·Rot(φ)·T(−c). P wie bei `abbildung_um_zentrum`.
+    """
+    out = abbildung_um_zentrum(drehung(winkel_grad), zentrum, P,
+                               namen=("T(-c)", "R", "T(c)"), decimal=decimal)
+    out.title = "Drehung um ein beliebiges Zentrum"
+    out.summary = ("M = T(c)·R·T(−c): erst das Zentrum in den Ursprung, dann "
+                   "drehen, dann zurückschieben.")
     return out

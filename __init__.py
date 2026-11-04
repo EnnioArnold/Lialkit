@@ -67,8 +67,8 @@ from .rechnen.skalarprodukt import (LaengeResult, NormierenResult, OrthogonalRes
                                     SkalarproduktResult, laenge, normieren,
                                     pruefe_orthogonal, senkrechter_vektor,
                                     skalarprodukt)
-from .rechnen.homogen_3d import (ZENTRUM_FOLIE_23, drehung_3d, drehung_um_zentrum,
-                                 verschiebung_3d)
+from .rechnen.homogen_3d import (ZENTRUM_FOLIE_23, abbildung_um_zentrum, drehung_3d,
+                                 drehung_um_zentrum, verschiebung_3d)
 from .rechnen.regression import (KleinsteQuadrateResult, ProjektionsmatrixResult,
                                  RegressionResult, kleinste_quadrate,
                                  projektionsmatrix, regression)
@@ -134,6 +134,7 @@ __all__ = [
     # Skalarprodukt, orthogonale Abbildungen, homogene Koordinaten (SW 7)
     "laenge", "normieren", "senkrechter_vektor", "skalarprodukt",
     "pruefe_orthogonal", "drehung_3d", "verschiebung_3d", "drehung_um_zentrum",
+    "abbildung_um_zentrum",
     "LaengeResult", "NormierenResult", "SkalarproduktResult", "OrthogonalResult",
     "ZENTRUM_FOLIE_23",
     # Lineare Regression und Projektion (SW 8)
