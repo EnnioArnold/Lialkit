@@ -10,6 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import lialkit as lk
+from lialkit.aufgaben.exercises import aufgabe, liste, loese
 from lialkit.grafik.plots_projektion import plot_skalarprodukt
 from lialkit.rechnen.abbildung import (BUCHSTABE_F_FOLIEN, drehung, homogen, scherung,
                                        skalierung, spiegelung_x, verschiebung, zusammensetzen)
@@ -131,6 +132,12 @@ try:
     check(False, "falsche Achse")
 except ValueError:
     pass
+
+print("Aufgabe SW7.F23 (Folie 23, ohne Musterlösung)")
+check(liste("SW7") == ["SW7.F23"], f"liste: {liste('SW7')}")
+a = aufgabe("SW7.F23")
+check("keine Musterlösung" in a.note and repr(a) and a._repr_html_(), "gekennzeichnet")
+check(loese("SW7.F23").matrix.rows == [[0, -1, 5], [1, 0, 1], [0, 0, 1]], "loese: 90° um (2,3)")
 
 print("Zeichnung")
 check(plot_skalarprodukt([4, 3], [1, 5]) is not None, "plot_skalarprodukt")

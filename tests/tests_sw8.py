@@ -11,6 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "..")))
 
 import lialkit as lk
+from lialkit.aufgaben.exercises import aufgabe, liste, loese
 from lialkit.grafik.plots_projektion import plot_regression
 from lialkit.rechnen.core import Matrix, Vector
 from lialkit.rechnen.regression import kleinste_quadrate, projektionsmatrix, regression
@@ -91,6 +92,15 @@ for _ in range(10):                                   # Normalgleichung und Mini
     for dc, dd in ((F(1, 10), 0), (0, F(1, 10)), (F(-1, 5), F(1, 5))):
         e2 = Vector([y - (g.C + dc + (g.D + dd) * t) for t, y in zip(ts, ys)])
         check(e2.norm_squared() > g.sqr, "jede andere Gerade hat grösseren Fehler")
+
+print("Aufgaben aus den Folien (ohne Musterlösung)")
+check(liste("SW8") == ["SW8.F14", "SW8.F18", "SW8.F19"], f"liste: {liste('SW8')}")
+for k in liste("SW8"):
+    check("keine Musterlösung" in aufgabe(k).note and repr(aufgabe(k)) and aufgabe(k)._repr_html_(), f"{k}: gekennzeichnet")
+check([h[1] for h in loese("SW8.F14").highlights] == [Vector([1, 0, 0]), Vector([0, 2, 0]), Vector([0, 0, 3])],
+      "F14: Projektionen auf e₁, e₂, e₃")
+check(loese("SW8.F18").x == Vector([5, -3]), "F18: x̂ = (5, −3)")
+check(loese("SW8.F19").P.rows == [[F(v, 6) for v in row] for row in sechstel], "F19: P")
 
 print("Zeichnung und Export")
 with tempfile.TemporaryDirectory() as tmp:
