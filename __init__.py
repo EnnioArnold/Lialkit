@@ -20,6 +20,8 @@ Kurzübersicht
     inverse(A)                  # über Gauss-Jordan
     det(A)                      # Determinante
     abbilden(drehung(30), P)    # lineare Abbildung (SW 5/6), Bildpunkte Q = A·P
+    skalarprodukt(u, v)         # Länge, Winkel, Projektionslänge (SW 7)
+    drehung_um_zentrum(90, (2, 3))   # homogene Koordinaten (SW 7)
 
     u, v = Vector([1, 2, 3]), Vector([4, 5, 6])
     cross(u, v)
@@ -60,6 +62,12 @@ from .rechnen.abbildung import (BASIS_FOLIE_6, BUCHSTABE_F_AUFGABE,
                                 spiegelung_achse_weg, spiegelung_x, spiegelung_y,
                                 transponierte_abbildung, verschiebung,
                                 zusammensetzen)
+from .rechnen.skalarprodukt import (LaengeResult, NormierenResult, OrthogonalResult,
+                                    SkalarproduktResult, laenge, normieren,
+                                    pruefe_orthogonal, senkrechter_vektor,
+                                    skalarprodukt)
+from .rechnen.homogen_3d import (ZENTRUM_FOLIE_23, drehung_3d, drehung_um_zentrum,
+                                 verschiebung_3d)
 from .grafik.plots import (plot_line, plot_plane, plot_spat, plot_transformation,
                     plot_vectors, has_plotly)
 from .grafik.plots_abbildung import (plot_abbildung, plot_basiswechsel,
@@ -74,6 +82,8 @@ for _alias, _real in (("core", "rechnen.core"), ("render", "rechnen.render"),
                       ("vectors", "rechnen.vectors"), ("plots", "grafik.plots"),
                       ("anim", "grafik.anim"),
                       ("abbildung", "rechnen.abbildung"),
+                      ("skalarprodukt", "rechnen.skalarprodukt"),
+                      ("homogen_3d", "rechnen.homogen_3d"),
                       ("plots_abbildung", "grafik.plots_abbildung"), ("exercises", "aufgaben.exercises"),
                       ("uebung", "aufgaben.uebung")):
     _m = _il.import_module(f"{__name__}.{_real}")
@@ -114,6 +124,11 @@ __all__ = [
     "RotationsreiheResult", "transponierte_abbildung", "TransponierteResult",
     "BUCHSTABE_F_FOLIEN", "BUCHSTABE_F_AUFGABE", "EINHEITSQUADRAT",
     "BASIS_FOLIE_6", "PHI_REIHE",
+    # Skalarprodukt, orthogonale Abbildungen, homogene Koordinaten (SW 7)
+    "laenge", "normieren", "senkrechter_vektor", "skalarprodukt",
+    "pruefe_orthogonal", "drehung_3d", "verschiebung_3d", "drehung_um_zentrum",
+    "LaengeResult", "NormierenResult", "SkalarproduktResult", "OrthogonalResult",
+    "ZENTRUM_FOLIE_23",
     # Zeichnen
     "plot_abbildung", "plot_basiswechsel", "plot_rotationsreihe",
     "plot_vectors", "plot_spat", "plot_line", "plot_plane",
@@ -139,6 +154,8 @@ def info() -> str:
         "  skalierung, drehung, drehstreckung, scherung, spiegelung_x/_y/_achse",
         "  homogen, verschiebung, pruefe_linear, finde_abbildung, rotationsreihe",
         "  transponierte_abbildung (SW 6: was A^T mit denselben Punkten macht)",
+        "  skalarprodukt, laenge, normieren, senkrechter_vektor (SW 7)",
+        "  pruefe_orthogonal, drehung_um_zentrum, drehung_3d, verschiebung_3d (SW 7)",
         "",
         "Zeichnen:",
         "  plot_vectors, plot_spat, plot_line, plot_plane, plot_transformation",
