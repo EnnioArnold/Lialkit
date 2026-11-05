@@ -78,7 +78,7 @@ for name, M, det_ in (("Drehung 90°", drehung(90), 1), ("Drehung 30°", drehung
                       ("Spiegelung x", spiegelung_x(), -1), ("Spiegelung 30°", lk.spiegelung_achse(30), -1)):
     r = pruefe_orthogonal(M)
     check(bool(r) and round(float(r.det)) == det_, f"{name} orthogonal, det {det_}")
-    check(r.A.T @ r.A == Matrix.identity(2) and ("Drehung" in r.art) == (det_ == 1), f"{name}: Einordnung")
+    check(all(abs(float((r.A.T @ r.A)[i, j]) - (i == j)) < 1e-9 for i in (0, 1) for j in (0, 1)) and ("Drehung" in r.art) == (det_ == 1), f"{name}: Einordnung")
 check(not pruefe_orthogonal(skalierung(2)), "Skalierung nicht orthogonal")
 check("nicht normiert" in pruefe_orthogonal(skalierung(2)).art, "Begründung: Länge")
 check(not pruefe_orthogonal(scherung(1)), "Scherung nicht orthogonal")
