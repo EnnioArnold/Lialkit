@@ -1,8 +1,10 @@
 # lialkit
 
 Lineare Algebra mit nachvollziehbarem Rechenweg, gebaut zum Modul
-I.BA_LIAL_MM.20 der HSLU. Deckt die Semesterwochen 1 bis 6 ab: Gauss, LR-Zerlegung,
-Inverse und Determinante, Vektorrechnung und lineare Abbildungen (SW5 und SW6).
+I.BA_LIAL_MM.20 der HSLU. Deckt die Semesterwochen 1 bis 8 ab: Gauss, LR-Zerlegung,
+Inverse und Determinante, Vektorrechnung, lineare Abbildungen (SW5 und SW6),
+Skalarprodukt, orthogonale Abbildungen und homogene Koordinaten (SW7) sowie
+lineare Regression mit orthogonaler Projektion (SW8).
 
 ## Installieren
 
@@ -36,8 +38,9 @@ nicht auseinanderlaufen.
 ```
 app/        das Fenster (lialkit_qt.py)
 rechnen/    Rechenkern: core, render, solving, factor, inverse, determinant,
-            vectors und abbildung (SW5/6)
-grafik/     Zeichnungen (plots, plots_abbildung) und Animationen (anim)
+            vectors und abbildung (SW5/6), skalarprodukt und homogen_3d (SW7),
+            regression (SW8)
+grafik/     Zeichnungen (plots, plots_abbildung, plots_projektion) und Animationen (anim)
 aufgaben/   Übungsaufgaben (exercises) und Vorlage zum Selbstprüfen (uebung)
 docs/       Architektur-Diagramm
 tests/      ein Testskript je Modul
@@ -76,6 +79,49 @@ e₂ ab, prüft die Ecke (1,1) und begründet sonst, warum es keine lineare Abbi
 gibt (der Nullpunkt bleibt nicht fest). Dann liefert es die 3×3-Matrix in
 homogenen Koordinaten.
 
+## Skalarprodukt, orthogonale Abbildungen, homogene Koordinaten (SW7)
+
+```python
+lk.skalarprodukt([1, 2], [3, -1])      # a·b, Längen, Winkel, Projektionslängen, parallel/senkrecht
+lk.laenge([4, 3])                      # |a| = 5 (Folie 5)
+lk.normieren([4, 3])                   # a⁰ = (4/5, 3/5) (Folie 6)
+lk.senkrechter_vektor([4, 3])          # (−3, 4) und (3, −4) (Folie 15)
+lk.pruefe_orthogonal(lk.drehung(30))   # längen- und winkeltreu? AᵀA = E, det = ±1 (Folie 17)
+lk.drehung_um_zentrum(90, (2, 3))      # Übung Folie 23: M = T(c)·R·T(−c)
+lk.abbildung_um_zentrum(A, (2, 3))     # dasselbe mit beliebiger 2×2-Matrix A
+lk.drehung_3d("y", 90)                 # 4×4 in homogenen Koordinaten (Folie 25)
+lk.verschiebung_3d(1, 2, 3)            # 4×4 (Folie 26)
+lk.plot_skalarprodukt([4, 3], [1, 5])  # a, b und die Projektion von b auf a
+```
+
+`dot`, `angle` und `projection` aus SW1 bleiben, wie sie waren; `skalarprodukt`
+zeigt zusätzlich alle Formen von Folie 15 auf einmal. Die 2D-Bausteine
+(`homogen`, `verschiebung`, `zusammensetzen`) gab es schon aus SW5; wie auf
+Folie 22 gilt T·R ≠ R·T, die zuerst wirkende Abbildung steht rechts.
+
+## Regression und Projektion (SW8)
+
+```python
+r = lk.regression([(0, 6), (1, 0), (2, 0)])   # Folie 9
+r.C, r.D, r.sqr                               # 5, −3, 6: b = 5 − 3t
+r.p, r.e                                      # Projektion (5, 2, −1), Fehler (1, −2, 1)
+r.vorhersage(3)                               # Wert der Geraden bei t = 3
+lk.kleinste_quadrate(A, b)                    # x̂ = (AᵀA)⁻¹Aᵀb für beliebiges A
+lk.projektionsmatrix(A)                       # P = A(AᵀA)⁻¹Aᵀ; ein Vektor a gibt aaᵀ/aᵀa
+lk.plot_regression([(0, 6), (1, 0), (2, 0)])  # Gerade, Fehler; bei drei Punkten auch C(A) im Raum
+```
+
+Sind die Spalten von A linear abhängig, bricht die Rechnung mit der
+Begründung von Folie 22 ab (AᵀA ist dann nicht invertierbar).
+
+**Offen (TODO):** Für SW7 und SW8 gibt es weder Animationen noch ein
+Übungsblatt oder eine Musterlösung. Die Folien-Aufgaben (SW7.F23, SW8.F14,
+F18, F19) sind aufgenommen und im Hinweis als »ohne Musterlösung« gekennzeichnet;
+ihre Lösungen rechnet das Kit selbst. Die 3D-Matrizen haben noch keine
+Zeichnung. Auf Folie 23 steht kein Drehwinkel; SW7.F23 nimmt 90°. In den Notizen
+zu SW8 steht »aᵀb transponiert anschauen«: das Skalarprodukt aᵀb ist in
+`skalarprodukt` und in der Projektion (Folie 13) umgesetzt.
+
 ## Genauigkeit
 
 Gerechnet wird exakt mit Brüchen. `1/3` bleibt `1/3` und wird nie zu
@@ -91,14 +137,19 @@ sie exakt: `|(3,4)| = 5`, nicht `5.0000`.
 ```python
 from lialkit.exercises import liste, aufgabe, loese
 
-liste('SW6')          # welche es gibt (SW1 bis SW6)
+liste('SW8')          # welche es gibt (SW1 bis SW8)
 aufgabe('SW3.1a')     # die Angabe
 loese('SW3.1a')       # durchgerechnet
 ```
 
-Enthalten sind die Aufgaben der Wochen 1 bis 6, zuletzt SW5.1a–e und SW5.2a/b
+Enthalten sind die Aufgaben der Wochen 1 bis 8, zuletzt SW5.1a–e und SW5.2a/b
 (lineare Abbildungen). Das Blatt von SW6 ist dasselbe; es steht als
 SW6.1a–e und SW6.2a/b mit denselben Daten und Lösungen noch einmal da.
+
+Für SW7 und SW8 gibt es nur die Folien (kein Blatt, keine Musterlösung). Daraus
+sind die gestellten Fragen als SW7.F23 (Drehung um ein Zentrum) und SW8.F14, F18,
+F19 (Projektion, Regression, Projektionsmatrix) aufgenommen; `loese` rechnet sie,
+eine Lösung der Dozierenden liegt aber nicht vor.
 
 **Eine Aufgabe ist bewusst offen gelassen:** SW3 Aufgabe 3 verlangt, dass
 du den LR-Algorithmus selbst programmierst. Dafür gibt es ein Gerüst mit
@@ -130,17 +181,21 @@ python3 app/lialkit_qt.py
 ```
 
 Der Ordnername ist egal. Das Fenster ist im Swiss-Design gehalten (Schwarz/Weiss,
-rotes Akzent, keine Rundungen), hell oder dunkel. Vier Ansichten:
+rotes Akzent, keine Rundungen), hell oder dunkel. Fünf Ansichten:
 
 - **Gauss** — Elimination von Hand oder Schritt für Schritt, mit Animation
   und Prüfung über Wolfram|Alpha
 - **Verfahren** — LR-Zerlegung, Inverse, Determinante und Rang
-- **Vektoren** — Skalar-, Vektor- und Spatprodukt, Winkel, Projektion
+- **Vektoren** — Skalar-, Vektor- und Spatprodukt, Winkel, Projektion; Länge,
+  Normieren und das Skalarprodukt mit Projektion (SW7)
 - **Abbildungen** — Skalierung, Drehung, Spiegelung, Scherung, Zusammensetzung;
   aus der Bildfigur die Matrix ablesen; Transponierte (SW6); eigene Punkte statt
-  Quadrat oder F
+  Quadrat oder F; Orthogonal prüfen und Abbildung um ein Zentrum (SW7)
+- **Regression** (SW8) — Regressionsgerade durch eigene Datenpunkte mit
+  Vorhersage, Projektionsmatrix; die Zeichnung zeigt bei drei Punkten auch den
+  Spaltenraum
 
-Verfahren und Vektoren zeigen ihr Ergebnis als Karte mit drei Ansichten:
+Alle Seiten zeigen ihr Ergebnis als Karte mit drei Ansichten:
 **Rechenweg**, **Zeichnung** und **Animation**.
 
 **Zeichnung.** Das Bild steht im Fenster; räumliche Bilder drehst du mit
@@ -174,6 +229,13 @@ ist auf den anderen beiden ausgegraut.
 
 ## Geprüft gegen
 
+SW7: Folie 5 und 6 (|(4,3)| = 5, a⁰ = (0.8, 0.6)), Folie 22 (T·R und R·T mit
+den Matrizen der Folie) und Folie 25/26 (3D-Matrizen). SW8: Folie 9 mit den
+Punkten (0,6), (1,0), (2,0): x̂ = (5, −3), p = (5, 2, −1), e = (1, −2, 1),
+SQR = 6 und die Projektionsmatrix von Folie 19, P = ⅙·(5 2 −1; 2 2 2; −1 2 5).
+Die Aufgaben SW7.F23 und SW8.F14/F18/F19 haben keine Musterlösung; ihre
+Ergebnisse sind von Hand und mit dem Normalgleichungs-Test nachgerechnet.
+
 SW6: Folie 7 (Q = A·P mit f₁ = (3, −1)ᵀ, f₂ = (−1, 2)ᵀ) und die Musterlösung
 lial-sw-06-loesungen.pdf (Aufgabe 1a, 1c, 1d). Neu hinzugekommen ist nur die
 Transponierte.
@@ -186,6 +248,6 @@ der beiden singulären Matrizen. Die LR-Zerlegungen aus SW3 sind über
 ## Tests
 
 ```bash
-python3 tests/tests_abbildung.py    # ebenso sw6, core, gauss, factor, inverse,
+python3 tests/tests_abbildung.py    # ebenso sw6, sw7, sw8, core, gauss, factor, inverse,
 python3 tests/tests_determinant.py  # vectors, exercises, plots, anim, app
 ```

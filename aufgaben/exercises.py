@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Die Übungsaufgaben aus den Semesterwochen 1 bis 6.
+Die Übungsaufgaben aus den Semesterwochen 1 bis 8.
 
 Die Aufgaben stehen hier als Daten, nicht als fertige Antworten. Du holst
 dir eine Aufgabe, rechnest selbst und vergleichst — das ist der Zweck.
@@ -18,7 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
-from ..rechnen.abbildung import BUCHSTABE_F_AUFGABE, EINHEITSQUADRAT, PHI_REIHE
+from ..rechnen.abbildung import (BUCHSTABE_F_AUFGABE, BUCHSTABE_F_FOLIEN, EINHEITSQUADRAT,
+                                 PHI_REIHE)
 from ..rechnen.core import Matrix, Vector
 
 
@@ -258,6 +259,41 @@ for _k in [k for k in EXERCISES if k.startswith("SW5.")]:
                   dict(_e.data), _e.method,
                   (_e.note + " " if _e.note else "") + f"Dieselbe Aufgabe wie {_k}."))
 
+# -- Semesterwoche 7 und 8: Beispiele und Übung aus den Folien -----------------
+# Für SW7/SW8 gibt es weder ein Übungsblatt noch eine Musterlösung, nur die
+# Folien. Aufgenommen sind darum nur die dort gestellten Fragen (Folie 23
+# der SW7, Folien 14, 18, 19 der SW8). Die Lösung rechnet das Kit; eine
+# Musterlösung der Dozierenden liegt nicht vor.
+
+_FOLIE = "Aufgabe aus den Folien; keine Musterlösung vorhanden, loese() rechnet sie."
+
+_add(Exercise(
+    "SW7.F23", "SW7", "Drehung um ein beliebiges Zentrum",
+    "Den Buchstaben F (Eckpunkte in homogenen Koordinaten) um das Zentrum "
+    "(2, 3) drehen: Zentrum in den Ursprung schieben, drehen, zurückschieben.",
+    {"F": BUCHSTABE_F_FOLIEN, "zentrum": (2, 3), "phi": 90},
+    "drehzentrum",
+    "Der Drehwinkel steht nicht auf der Folie; hier φ = 90° gewählt, "
+    "drehung_um_zentrum(phi, zentrum) nimmt jeden Winkel. " + _FOLIE))
+
+_add(Exercise(
+    "SW8.F14", "SW8", "Projektion auf die Einheitsvektoren",
+    "Die Projektion von b = (1, 2, 3) auf die Einheitsvektoren e₁, e₂, e₃ "
+    "mit der Formel p = aaᵀb / aᵀa berechnen.",
+    {"b": Vector([1, 2, 3]),
+     "a": [Vector([1, 0, 0]), Vector([0, 1, 0]), Vector([0, 0, 1])]},
+    "projektion_einheitsvektoren", _FOLIE))
+
+_add(Exercise(
+    "SW8.F18", "SW8", "Beste Lösung x̂ zu den Punkten (0,6), (1,0), (2,0)",
+    "Wie lautet die Lösung x̂ = (AᵀA)⁻¹Aᵀb des Regressionsproblems?",
+    {"t": [0, 1, 2], "b": [6, 0, 0]}, "regression", _FOLIE))
+
+_add(Exercise(
+    "SW8.F19", "SW8", "Projektionsmatrix zur Datenmatrix",
+    "Wie lautet die Projektionsmatrix P = A(AᵀA)⁻¹Aᵀ für A = (1 0; 1 1; 1 2)?",
+    {"A": _m([[1, 0], [1, 1], [1, 2]])}, "projektionsmatrix", _FOLIE))
+
 
 # ==========================================================================
 # Zugriff
@@ -347,6 +383,31 @@ def loese(key: str, weg: bool = True, decimal: bool = False):
         from ..rechnen.abbildung import rotationsreihe
         return rotationsreihe(ex.method[-1], data["F"], data["T"],
                               data["phi"], decimal=True)
+
+    if ex.method == "drehzentrum":
+        from ..rechnen.homogen_3d import drehung_um_zentrum
+        return drehung_um_zentrum(data["phi"], data["zentrum"], data["F"], decimal=decimal)
+
+    if ex.method == "projektion_einheitsvektoren":
+        from ..rechnen.regression import kleinste_quadrate
+        from ..rechnen.render import Result, Step
+        out = Result(decimal)
+        out.title, out.summary = ex.title, ex.task
+        for k, a in enumerate(data["a"], 1):
+            r = kleinste_quadrate(a, data["b"], decimal)
+            out.steps.append(Step(f"Auf e_{k} projizieren",
+                                  detail=f"p = \\frac{{a a^T}}{{a^T a}}\\,b",
+                                  items=[("p", r.p)]))
+            out.highlights.append((f"p_{k}", r.p))
+        return out
+
+    if ex.method == "regression":
+        from ..rechnen.regression import regression
+        return regression(data["t"], data["b"], decimal=decimal)
+
+    if ex.method == "projektionsmatrix":
+        from ..rechnen.regression import projektionsmatrix
+        return projektionsmatrix(data["A"], decimal=decimal)
 
     if ex.method == "program":
         raise ValueError(
