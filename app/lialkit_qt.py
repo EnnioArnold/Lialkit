@@ -3647,7 +3647,22 @@ class MapsPage(QWidget):
 # Reiter: Regression (SW 8)
 # ==========================================================================
 
-REGRESSION_OPS = {"Regressionsgerade": "fit", "Projektionsmatrix": "proj"}
+REGRESSION_OPS = {"Regressionsgerade": "fit", "Projektionsmatrix": "proj",
+                  "Multiple Regression": "multi"}
+MULTI_BEISPIEL = "(2,1.1,93) (2,1.9,106) (4,2,146) (5,1.5,140) (7,2.1,158)"
+
+
+def parse_multi_data(text: str):
+    """Beobachtungen wie »(2,1.1,93) …« (x₁, …, xₙ, y) als (X, y); ValueError bei unlesbarer Eingabe (SW 9)."""
+    import re
+
+    zahl = r"[-+]?\d+(?:\.\d+)?(?:/\d+)?"
+    zeilen = [re.findall(zahl, t) for t in re.findall(r"\(([^()]*)\)", text)]
+    if len(zeilen) < 3 or len({len(z) for z in zeilen}) != 1 or len(zeilen[0]) < 2:
+        raise ValueError("Mindestens drei Beobachtungen (x₁, …, xₙ, y) eingeben, "
+                         "z. B. (2,1.1,93) (2,1.9,106) (4,2,146)")
+    zeilen = [[parse_number(v) for v in z] for z in zeilen]
+    return [z[:-1] for z in zeilen], [z[-1] for z in zeilen]
 
 
 def parse_data_points(text: str):
@@ -3699,6 +3714,13 @@ class RegressionPage(QWidget):
         self.pts_edit.setToolTip("Punkte als (t,b), durch Leerzeichen getrennt.")
         self.pts_edit.textChanged.connect(self._input_changed)
         lay.addWidget(self.pts_edit)
+        self.multi_edit = QLineEdit(MULTI_BEISPIEL)
+        self.multi_edit.setObjectName("cell")
+        self.multi_edit.setFont(FONTS.f(13))
+        self.multi_edit.setToolTip("Beobachtungen als (x₁, …, xₙ, y): Training, Protein, Gewicht.")
+        self.multi_edit.textChanged.connect(self._input_changed)
+        self.multi_edit.hide()
+        lay.addWidget(self.multi_edit)
         lay.addSpacing(10)
         row = QHBoxLayout()
         row.setSpacing(8)
@@ -3749,13 +3771,24 @@ class RegressionPage(QWidget):
             "fit": "Gesucht ist b = C + D·t. Das System A·(C, D) = b hat keine Lösung; "
                    "die beste ist x̂ = (AᵀA)⁻¹Aᵀb, die Projektion von b auf C(A).",
             "proj": "P = A(AᵀA)⁻¹Aᵀ projiziert jeden Vektor b auf den Spaltenraum der "
-                    "Datenmatrix A mit den Zeilen (1, tᵢ)."}[self.op])
+                    "Datenmatrix A mit den Zeilen (1, tᵢ).",
+            "multi": "SW 9: y = b₀ + b₁x₁ + … + bₙxₙ. Eingabe je Beobachtung (x₁, …, xₙ, y); "
+                     "b̂ = (XᵀX)⁻¹Xᵀy, dazu P, Q, SQT, SQR und R². Vorhersage bei x = "
+                     "»3, 1.5« (so viele Zahlen wie Einflussgrössen)."}[self.op])
+        multi = self.op == "multi"
+        self.multi_edit.setVisible(multi)
+        self.pts_edit.setVisible(not multi)
         self.anim.refresh()
 
     def result(self):
         """Das Ergebnis der gewählten Rechnung (wirft ValueError)."""
         from lialkit.rechnen.regression import projektionsmatrix, regression
 
+        if self.op == "multi":
+            from lialkit.rechnen.multiple_regression import mehrfachregression
+
+            X, y = parse_multi_data(self.multi_edit.text())
+            return mehrfachregression(X, y, decimal=self.decimal)
         pts = parse_data_points(self.pts_edit.text())
         if self.op == "proj":
             return projektionsmatrix([[1, t] for t, _ in pts], decimal=self.decimal)
@@ -3768,6 +3801,14 @@ class RegressionPage(QWidget):
             if self.op == "fit":
                 t = parse_number(self.t_edit.text())
                 extra = f"Vorhersage bei t = {fmt(t)}: b = {fmt(result.vorhersage(t), self.decimal)}"
+            elif self.op == "multi":
+                x = [parse_number(v) for v in re.split(r"[,;\s]+", self.t_edit.text().strip()) if v]
+                try:
+                    extra = (f"Vorhersage bei x = ({', '.join(fmt(v) for v in x)}): "
+                             f"y = {fmt(result.vorhersage(x), self.decimal)}")
+                except ValueError as exc:
+                    extra = str(exc)
+                extra += f"   R² = {fmt(result.r2, self.decimal)}"
         except ValueError as exc:
             self.lbl_err.setText(str(exc))
             self.lbl_pred.setText("")
@@ -3780,7 +3821,7 @@ class RegressionPage(QWidget):
         show_view(self, 0)
 
     def anim_key(self):
-        return (self.op, self.pts_edit.text())
+        return (self.op, self.pts_edit.text(), self.multi_edit.text())
 
     def build_job(self, _scene: str, _quality: str):
         return ("Für die Regression gibt es noch keine Animation — "
@@ -3790,6 +3831,17 @@ class RegressionPage(QWidget):
         from lialkit.grafik.plots_projektion import plot_regression
 
         try:
+            if self.op == "multi":
+                from lialkit.grafik.plots_projektion import plot_mehrfachregression
+
+                X, y = parse_multi_data(self.multi_edit.text())
+                self.lbl_err.setText("")
+                if not PlotCanvas.available():
+                    raise ValueError("Zum Zeichnen fehlt Matplotlib.")
+                self.plot.show_figure(plot_mehrfachregression(X, y),
+                                      "Links y gegen ŷ (Fehler gestrichelt), rechts SQT = SQE + SQR.")
+                show_view(self, 1)
+                return
             pts = parse_data_points(self.pts_edit.text())
             self.lbl_err.setText("")
             if not PlotCanvas.available():
@@ -3996,6 +4048,11 @@ class RegressionHelpDialog(HelpDialog):
          "A hat die Zeilen (1, tᵢ), x̂ = (C, D) gehört zur Geraden b = C + D·t. "
          "Der Fehler e steht senkrecht auf beiden Spalten (Aᵀe = 0); SQR = ‖e‖² "
          "ist die Summe der Fehlerquadrate."),
+        ("Multiple Regression", "b̂ = (XᵀX)⁻¹Xᵀy",
+         "SW 9: mehrere Einflussgrössen. X hat die Zeilen (1, xᵢ₁, …, xᵢₙ); "
+         "ŷ = Py mit der Hut-Matrix P, e = Qy mit Q = I − P. Das Bestimmtheitsmass "
+         "R² = 1 − SQR/SQT = 1 − yᵀQy / yᵀMy mit der zentrierenden Matrix "
+         "M = I − 11ᵀ/m liegt zwischen 0 und 1."),
         ("Projektionsmatrix", "P = A(AᵀA)⁻¹Aᵀ",
          "Pb ist die Projektion von b auf den Spaltenraum. Vektoren im Spaltenraum "
          "bleiben fest (Pb = b), Vektoren senkrecht dazu werden zu 0; P² = P und "
