@@ -23,6 +23,7 @@ Kurzübersicht
     skalarprodukt(u, v)         # Länge, Winkel, Projektionslänge (SW 7)
     drehung_um_zentrum(90, (2, 3))   # homogene Koordinaten (SW 7)
     regression([(0, 6), (1, 0), (2, 0)])   # Regressionsgerade (SW 8)
+    mehrfachregression(X, y)    # mehrere Einflussgrössen, P, Q, R² (SW 9)
 
     u, v = Vector([1, 2, 3]), Vector([4, 5, 6])
     cross(u, v)
@@ -76,7 +77,11 @@ from .grafik.plots import (plot_line, plot_plane, plot_spat, plot_transformation
                     plot_vectors, has_plotly)
 from .grafik.plots_abbildung import (plot_abbildung, plot_basiswechsel,
                                      plot_rotationsreihe)
-from .grafik.plots_projektion import plot_regression, plot_skalarprodukt
+from .rechnen.multiple_regression import (GEWICHTHEBER_X, GEWICHTHEBER_Y,
+                                          MehrfachRegressionResult, mehrfachregression,
+                                          residualmatrix, zentriermatrix)
+from .grafik.plots_projektion import (plot_mehrfachregression, plot_regression,
+                                      plot_skalarprodukt)
 
 # Die Module liegen in Unterordnern; die alten Namen (lialkit.core, lialkit.anim,
 # lialkit.exercises, …) bleiben als Alias erhalten, damit Notebooks weiter laufen.
@@ -90,6 +95,7 @@ for _alias, _real in (("core", "rechnen.core"), ("render", "rechnen.render"),
                       ("skalarprodukt", "rechnen.skalarprodukt"),
                       ("homogen_3d", "rechnen.homogen_3d"),
                       ("regression", "rechnen.regression"),
+                      ("multiple_regression", "rechnen.multiple_regression"),
                       ("plots_projektion", "grafik.plots_projektion"),
                       ("plots_abbildung", "grafik.plots_abbildung"), ("exercises", "aufgaben.exercises"),
                       ("uebung", "aufgaben.uebung")):
@@ -140,8 +146,11 @@ __all__ = [
     # Lineare Regression und Projektion (SW 8)
     "regression", "kleinste_quadrate", "projektionsmatrix",
     "RegressionResult", "KleinsteQuadrateResult", "ProjektionsmatrixResult",
+    # Multiple lineare Regression (SW 9)
+    "mehrfachregression", "residualmatrix", "zentriermatrix", "MehrfachRegressionResult",
+    "GEWICHTHEBER_X", "GEWICHTHEBER_Y",
     # Zeichnen
-    "plot_skalarprodukt", "plot_regression", "plot_abbildung", "plot_basiswechsel", "plot_rotationsreihe",
+    "plot_mehrfachregression", "plot_skalarprodukt", "plot_regression", "plot_abbildung", "plot_basiswechsel", "plot_rotationsreihe",
     "plot_vectors", "plot_spat", "plot_line", "plot_plane",
     "plot_transformation", "has_plotly",
     # Darstellung
@@ -168,11 +177,12 @@ def info() -> str:
         "  skalarprodukt, laenge, normieren, senkrechter_vektor (SW 7)",
         "  pruefe_orthogonal, drehung_um_zentrum, drehung_3d, verschiebung_3d (SW 7)",
         "  regression, kleinste_quadrate, projektionsmatrix (SW 8: Regression, Projektion)",
+        "  mehrfachregression, zentriermatrix, residualmatrix (SW 9: multiple Regression, R²)",
         "",
         "Zeichnen:",
         "  plot_vectors, plot_spat, plot_line, plot_plane, plot_transformation",
         "  plot_abbildung, plot_basiswechsel, plot_rotationsreihe",
-        "  plot_skalarprodukt (SW 7), plot_regression (SW 8)",
+        "  plot_skalarprodukt (SW 7), plot_regression (SW 8), plot_mehrfachregression (SW 9)",
         f"  Plotly für Räumliches: {'vorhanden' if has_plotly() else 'fehlt'}",
         "",
         "Jedes Ergebnis kennt .as_decimal(), .as_exact(), .latex() und .show().",
