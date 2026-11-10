@@ -10,6 +10,7 @@ Gegebene, schwarz für das Ergebnis, grau gestrichelt für Hilfslinien.
 from __future__ import annotations
 
 from ..rechnen.core import Vector
+from ..rechnen.multiple_regression import mehrfachregression
 from ..rechnen.regression import regression
 from .plots import INK, RED, _finish, _style_2d, _style_3d, _swiss
 from .plots_abbildung import _figur, _grenzen, _pfeil
@@ -92,5 +93,35 @@ def plot_regression(t, b=None, titel: str = "", groesse: float = 5.0):
         a3.plot([pp[0], bb[0]], [pp[1], bb[1]], [pp[2], bb[2]], color=GRAU, lw=1.5, ls="--")
         for v, name, farbe in ((bb, "b", RED), (pp, "p = Ax̂", INK)):
             a3.text(*v, " " + name, color=farbe, fontsize=11, fontweight="bold")
+    fig.tight_layout()
+    return _finish(fig)
+
+
+@_swiss
+def plot_mehrfachregression(X, y, titel: str = "", groesse: float = 5.0):
+    """
+    Folien 12 und 18 bis 21: links beobachtetes y (rot) gegen vorhergesagtes ŷ
+    (liegt die Wolke auf der Diagonalen, ist R² nahe 1; Fehler e grau gestrichelt),
+    rechts SQT, SQE und SQR als Balken (SQT = SQE + SQR).
+    """
+    import matplotlib.pyplot as plt
+
+    r = mehrfachregression(X, y)
+    ys, yh = [float(v) for v in r.y], [float(v) for v in r.yhat]
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(groesse * 2, groesse))
+    _style_2d(ax, titel or f"R² = {float(r.r2):.4f}")
+    lo, hi = min(ys + yh), max(ys + yh)
+    ax.plot([lo, hi], [lo, hi], color=INK, lw=1.8, label="ŷ = y (exaktes Modell)", zorder=3)
+    for a, b in zip(yh, ys):
+        ax.plot([a, a], [a, b], color=GRAU, lw=1.2, ls="--", zorder=2)
+    ax.plot(yh, ys, "o", color=RED, ms=7, label="Samples (ŷᵢ, yᵢ)", zorder=4)
+    ax.set_aspect("auto")
+    ax.set_xlabel("ŷ (Modell)")
+    ax.set_ylabel("y (gemessen)")
+    ax.legend(loc="best", fontsize=10)
+    _style_2d(bx, "Fehlerquadrate")
+    bx.bar(["SQT", "SQE", "SQR"], [float(r.sqt), float(r.sqe), float(r.sqr)],
+           color=[INK, GRAU, RED], zorder=3)
+    bx.set_aspect("auto")
     fig.tight_layout()
     return _finish(fig)
