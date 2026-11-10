@@ -32,6 +32,9 @@ ON_DARK_SOFT = "#a8a29e"
 MINT, PEACH, LAVENDER, SKY, ROSE = "#a7e5d3", "#f4c5a8", "#c8b8e0", "#a8c8e8", "#e8b8c4"
 ORBS = (MINT, PEACH, LAVENDER, SKY, ROSE)
 
+# Dunkelmodus: gesättigtere Töne, sonst wirken Pastelle auf Tinte grau
+ORBS_DARK = dict(LAVENDER="#7c5cd6", SKY="#3b82c4", MINT="#2fa88a", PEACH="#d9743c")
+
 ERROR = "#dc2626"
 SUCCESS = "#16a34a"
 

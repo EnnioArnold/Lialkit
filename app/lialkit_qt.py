@@ -877,15 +877,73 @@ def qcolor(key: str) -> QColor:
     return QColor(T[key])
 
 
+class _Shadow(QWidget):
+    """Weicher Schatten (0 4px 16px) unter einer Karte; nur beim Überfahren da, ohne Effekt auf die Karte selbst."""
+    BLUR, DY = 16, 4
+
+    def __init__(self, parent, card):
+        super().__init__(parent)
+        self.card = card
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.sync()
+
+    def sync(self):
+        m = self.BLUR
+        self.setGeometry(self.card.geometry().adjusted(-m, -m + self.DY, m, m + self.DY))
+        self.stackUnder(self.card)
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        strength = 0.25 if T["dark"] else 0.04
+        steps = 8
+        for i in range(steps):          # von aussen nach innen dichter
+            grow = self.BLUR * (1 - i / steps)
+            c = QColor(0, 0, 0)
+            c.setAlphaF(strength / steps * 1.6)
+            p.setBrush(c)
+            r = QRectF(self.BLUR - grow, self.BLUR - grow,
+                       self.width() - 2 * (self.BLUR - grow),
+                       self.height() - 2 * (self.BLUR - grow))
+            p.drawRoundedRect(r, 16 + grow, 16 + grow)
+
+
 class Card(QFrame):
-    """Weisse Karte, 16 px Radius, Hairline; die Linie wird beim Überfahren etwas kräftiger."""
+    """Weisse Karte, 16 px Radius, Hairline; beim Überfahren ein leiser Schatten."""
 
     def __init__(self, parent=None, pad: int = 26):
         super().__init__(parent)
         self.setObjectName("card")
+        self._shadow: _Shadow | None = None
         self.lay = QVBoxLayout(self)
         self.lay.setContentsMargins(pad, pad, pad, pad)
         self.lay.setSpacing(0)
+
+    def enterEvent(self, event):
+        host = self.parentWidget()
+        if host is not None and self._shadow is None:
+            self._shadow = _Shadow(host, self)
+            self._shadow.show()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        # Zeigt die Maus auf ein Kind der Karte, kommt kein leave: erst bei echtem Verlassen weg.
+        if self._shadow is not None:
+            self._shadow.deleteLater()
+            self._shadow = None
+        super().leaveEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._shadow is not None:
+            self._shadow.sync()
+
+    def hideEvent(self, event):
+        if self._shadow is not None:
+            self._shadow.deleteLater()
+            self._shadow = None
+        super().hideEvent(event)
 
     def restyle(self):
         pass                      # alles im Stylesheet (#card, #card:hover)
@@ -929,13 +987,16 @@ class Atmosphere(QWidget):
             self._cache.fill(Qt.transparent)
             q = QPainter(self._cache)
             q.setPen(Qt.NoPen)
-            top = 0.20 if T["dark"] else 0.55
+            top = 0.24 if T["dark"] else 0.55
             for fx, y, r, col in self.BLOBS:
+                if T["dark"]:
+                    col = {D.LAVENDER: D.ORBS_DARK["LAVENDER"], D.SKY: D.ORBS_DARK["SKY"],
+                           D.MINT: D.ORBS_DARK["MINT"], D.PEACH: D.ORBS_DARK["PEACH"]}[col]
                 c = QColor(col)
                 grad = QRadialGradient(QPointF(fx * self.width(), y), r)
-                c.setAlphaF(top * (0.5 if T["dark"] else 1.0))
+                c.setAlphaF(top)
                 grad.setColorAt(0.0, c)
-                c.setAlphaF(top * 0.4 * (0.5 if T["dark"] else 1.0))
+                c.setAlphaF(top * 0.4)
                 grad.setColorAt(0.55, c)
                 c.setAlphaF(0.0)
                 grad.setColorAt(1.0, c)
@@ -979,7 +1040,7 @@ class Segmented(QWidget):
         self.font_ = FONTS.f(11)
         metrics = QFontMetricsF(self.font_)
         self.seg_w = seg_width or int(
-            max(metrics.horizontalAdvance(o) for o in options)) + 30
+            max(metrics.horizontalAdvance(o) for o in options)) + 40
         self.setFixedSize(self.seg_w * len(options) + 6, 30)
         self.setCursor(Qt.PointingHandCursor)
 
@@ -3496,7 +3557,7 @@ class MapsPage(QWidget):
         orow.setContentsMargins(0, 0, 0, 0)
         orow.addWidget(label("Objekt", 11, "sec"))
         self.seg_obj = Segmented(["Einheitsquadrat", "Buchstabe F", "Eigene"], 0,
-                                 seg_width=104)
+                                 seg_width=118)
         self.seg_obj.changed.connect(self.set_obj)
         orow.addWidget(self.seg_obj)
         orow.addStretch(1)
@@ -4460,7 +4521,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Gauss-Elimination")
         self.resize(1240, 880)
-        self.setMinimumSize(880, 560)
+        self.setMinimumSize(1180, 560)  # schmaler passt die Navigationsleiste nicht
 
         self.jordan = False
         self.decimal = False
@@ -4507,13 +4568,13 @@ class MainWindow(QMainWindow):
         self.nav.setObjectName("nav")
         self.nav.setFixedHeight(56)
         nav_lay = QHBoxLayout(self.nav)
-        nav_lay.setContentsMargins(32, 0, 32, 0)
+        nav_lay.setContentsMargins(24, 0, 24, 0)
         self.brand = label("lialkit", 13, weight=QFont.DemiBold)
         nav_lay.addWidget(self.brand)
         nav_lay.addSpacing(18)
         self.seg_page = Segmented(["Gauss", "Verfahren", "Vektoren", "Abbildungen",
                                    "Regression"],
-                                  0, seg_width=96)
+                                  0, seg_width=100)
         self.seg_page.changed.connect(self.set_page)
         nav_lay.addWidget(self.seg_page)
         nav_lay.addStretch(1)
@@ -4916,7 +4977,6 @@ class MainWindow(QMainWindow):
         #nav {{ background: {T['nav']}; }}
         #card {{ background: {T['card']}; border-radius: 16px;
                  border: 1px solid {T['line']}; }}
-        #card:hover {{ border-color: {T['line2']}; }}
         #hint, #preview {{ background: {T['fill2']}; border-radius: 12px; }}
         #preview {{ padding: 13px 15px; color: {T['text']}; }}
         #histhost {{ background: {T['fill2']}; border-radius: 12px; }}
