@@ -34,14 +34,15 @@ from typing import Callable, Sequence
 
 from PySide6.QtCore import (QEasingCurve, QObject, QPoint, QPointF,
                             QPropertyAnimation, QRectF, QSize, Qt, QThread,
-                            QTimer, QUrl, Property, Signal)
+                            QTimer, QUrl, Property, Signal, QEvent)
 from PySide6.QtGui import (QColor, QFont, QFontDatabase, QFontMetricsF, QMovie,
-                           QPainter, QPainterPath, QPen)
+                           QPainter, QPainterPath, QPen, QPixmap, QRadialGradient,
+                           QLinearGradient)
 from PySide6.QtWidgets import (QApplication, QDialog, QFrame,
                                QHBoxLayout, QLabel,
                                QLineEdit, QMainWindow, QMenu, QProgressBar,
                                QPushButton, QScrollArea, QSizePolicy, QStackedWidget,
-                               QVBoxLayout, QWidget)
+                               QVBoxLayout, QWidget, QGraphicsOpacityEffect)
 
 # Manim ist freiwillig: fehlt es, sagt die Animationskarte, was zu tun ist.
 # Dieser Ordner ist selbst das Paket `lialkit` — auch dann, wenn er nach dem
@@ -64,6 +65,7 @@ except Exception as _exc:                                    # pragma: no cover
     gauss_anim = None
     ANIM_IMPORT_ERROR = str(_exc)
 from orb import ThinkingOrb
+from lialkit import design as D
 
 # QtMultimedia spielt das MP4 ab. Das ist der Normalfall; fehlt es, fällt der
 # Abspieler auf das GIF zurück — sichtbar schlechter, weil ein GIF nur 256
@@ -795,22 +797,9 @@ def run_vector_checks(appid: str, op: str, u, v, w,
 # Farben und Schriften
 # ==========================================================================
 
-# Swiss Style (claude-design-styles): Schwarz/Weiss, ein Rot, keine Rundungen.
-LIGHT = dict(
-    bg="#ffffff", nav="#ffffff", card="#ffffff", text="#000000", sec="#333333",
-    ter="#666666", line="#000000", hair="#cccccc", fill="#f4f4f4", fill2="#f4f4f4",
-    seg="#ffffff", blue="#000000", blue_hi="#e60000", blue_soft="#f4f4f4",
-    green="#18794e", green_soft="#e6f4ec", red="#e60000", red_soft="#fdecec",
-    amber="#ab5200", amber_soft="#fff4e0", flash="#fff3c4",
-    entry="#ffffff", shadow=0, dark=False)
-
-DARK = dict(
-    bg="#000000", nav="#000000", card="#000000", text="#ffffff", sec="#cccccc",
-    ter="#888888", line="#ffffff", hair="#333333", fill="#1a1a1a", fill2="#111111",
-    seg="#333333", blue="#e60000", blue_hi="#ff3333", blue_soft="#2a0000",
-    green="#46a758", green_soft="#102a16", red="#ff3333", red_soft="#2a0000",
-    amber="#ffb224", amber_soft="#3a2a0a", flash="#3d3210",
-    entry="#000000", shadow=0, dark=True)
+# Farben, Radien und Schriften kommen aus design.py (eine Stelle für alles).
+LIGHT = dict(D.APP_LIGHT)
+DARK = dict(D.APP_DARK)
 
 T: dict = dict(LIGHT)
 
@@ -825,21 +814,20 @@ def pick_font(candidates: Sequence[str], fallback: str) -> str:
 
 class Fonts:
     def __init__(self):
-        ui = pick_font(["Helvetica Neue", "Helvetica", "Arial", "SF Pro Text", ".AppleSystemUIFont", "Segoe UI Variable Text", "Segoe UI",
-                        "DejaVu Sans"], "Sans Serif")
-        display = pick_font(["Helvetica Neue", "Helvetica", "Arial", "SF Pro Display", "SF Pro Text", "Segoe UI Variable Display",
-                             "Segoe UI", "DejaVu Sans"], ui)
-        mono = pick_font(["SF Mono", "Menlo", "Cascadia Mono", "Consolas",
-                          "DejaVu Sans Mono"], "Monospace")
-        self.family, self.display, self.mono_family = ui, display, mono
+        self.family = pick_font(D.FONT_UI, "Sans Serif")
+        self.display = pick_font(D.FONT_DISPLAY, "Serif")
+        self.mono_family = pick_font(D.FONT_MONO, "Monospace")
 
     def f(self, size: int, weight: int = QFont.Normal,
           display: bool = False, mono: bool = False) -> QFont:
-        fam = self.mono_family if mono else (self.display if display else self.family)
+        # Überschriften ab 20 pt in der Serif Light, kleiner Fliesstext bleibt Inter.
+        serif = display and size >= 20
+        fam = self.mono_family if mono else (self.display if serif else self.family)
         font = QFont(fam, size)
-        font.setWeight(weight)
-        if display:
-            font.setLetterSpacing(QFont.PercentageSpacing, 97)
+        font.setWeight(QFont.Light if serif else weight)
+        if not mono:
+            font.setLetterSpacing(QFont.PercentageSpacing,
+                                  D.DISPLAY_SPACING if serif else D.UI_SPACING)
         return font
 
 
@@ -890,7 +878,7 @@ def qcolor(key: str) -> QColor:
 
 
 class Card(QFrame):
-    """Eckige Fläche mit schwarzer Linie, ohne Schatten."""
+    """Weisse Karte, 16 px Radius, Hairline; die Linie wird beim Überfahren etwas kräftiger."""
 
     def __init__(self, parent=None, pad: int = 26):
         super().__init__(parent)
@@ -900,7 +888,80 @@ class Card(QFrame):
         self.lay.setSpacing(0)
 
     def restyle(self):
-        pass                      # Swiss: kein Schatten, die Linie kommt aus dem Stylesheet
+        pass                      # alles im Stylesheet (#card, #card:hover)
+
+
+class Atmosphere(QWidget):
+    """
+    Weiche Pastell-Orbs hinter dem Seitenkopf, nur Stimmung: liegt unter allen
+    Controls, fängt keine Mausereignisse und wird nur bei Grössen- oder
+    Themenwechsel neu gemalt (als Pixmap gecacht, kostet beim Scrollen nichts).
+    """
+    HEIGHT = 380
+    # (x-Anteil, y in px, Radius in px, Farbe)
+    BLOBS = ((0.82, 40, 300, D.LAVENDER), (0.62, 120, 240, D.MINT),
+             (0.96, 190, 230, D.PEACH), (0.30, 20, 210, D.SKY))
+
+    def __init__(self, host: QWidget):
+        super().__init__(host)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self._cache: QPixmap | None = None
+        host.installEventFilter(self)
+        self._fit(host)
+
+    def _fit(self, host: QWidget):
+        self.setGeometry(0, 0, host.width(), self.HEIGHT)
+        self.lower()
+        self._cache = None
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Resize:
+            self._fit(obj)
+        return False
+
+    def restyle(self):
+        self._cache = None
+        self.update()
+
+    def paintEvent(self, _event):
+        if self._cache is None or self._cache.size() != self.size():
+            self._cache = QPixmap(self.size())
+            self._cache.fill(Qt.transparent)
+            q = QPainter(self._cache)
+            q.setPen(Qt.NoPen)
+            top = 0.20 if T["dark"] else 0.55
+            for fx, y, r, col in self.BLOBS:
+                c = QColor(col)
+                grad = QRadialGradient(QPointF(fx * self.width(), y), r)
+                c.setAlphaF(top * (0.5 if T["dark"] else 1.0))
+                grad.setColorAt(0.0, c)
+                c.setAlphaF(top * 0.4 * (0.5 if T["dark"] else 1.0))
+                grad.setColorAt(0.55, c)
+                c.setAlphaF(0.0)
+                grad.setColorAt(1.0, c)
+                q.setBrush(grad)
+                q.drawEllipse(QPointF(fx * self.width(), y), r, r)
+            # nach unten ausblenden, damit kein Rand entsteht
+            fade = QLinearGradient(0, 0, 0, self.height())
+            fade.setColorAt(0.0, QColor(0, 0, 0, 255))
+            fade.setColorAt(1.0, QColor(0, 0, 0, 0))
+            q.setCompositionMode(QPainter.CompositionMode_DestinationIn)
+            q.fillRect(self._cache.rect(), fade)
+            q.end()
+        QPainter(self).drawPixmap(0, 0, self._cache)
+
+
+def fade_in(widget: QWidget, ms: int = 200):
+    """Blendet ein Widget kurz ein; der Effekt wird danach wieder entfernt."""
+    effect = QGraphicsOpacityEffect(widget)
+    widget.setGraphicsEffect(effect)
+    anim = QPropertyAnimation(effect, b"opacity", widget)
+    anim.setDuration(ms)
+    anim.setStartValue(0.0)
+    anim.setEndValue(1.0)
+    anim.setEasingCurve(QEasingCurve.OutCubic)
+    anim.finished.connect(lambda: widget.setGraphicsEffect(None))
+    anim.start(QPropertyAnimation.DeleteWhenStopped)
 
 
 class Segmented(QWidget):
@@ -927,14 +988,15 @@ class Segmented(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
         p.setBrush(qcolor("fill2") if not self.enabled else qcolor("fill"))
-        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 0, 0)
+        r = self.height() / 2
+        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), r, r)
         p.setFont(self.font_)
         for i, label in enumerate(self.options):
             box = QRectF(3 + i * self.seg_w, 3, self.seg_w, self.height() - 6)
             if i == self.value:
                 p.setBrush(qcolor("fill") if not self.enabled else qcolor("seg"))
                 p.setPen(Qt.NoPen)
-                p.drawRoundedRect(box, 0, 0)
+                p.drawRoundedRect(box, box.height() / 2, box.height() / 2)
             if not self.enabled:
                 p.setPen(qcolor("ter"))
             else:
@@ -986,7 +1048,7 @@ class Stepper(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
         p.setBrush(qcolor("fill"))
-        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 0, 0)
+        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 15, 15)
         p.setFont(self.font_)
         p.setPen(qcolor("text"))
         h = self.height()
@@ -1048,6 +1110,8 @@ def pill(text: str, kind: str = "primary", on_click: Callable | None = None,
     btn.setObjectName(kind)
     btn.setCursor(Qt.PointingHandCursor)
     btn.setFixedHeight(30 if small else 38)
+    if kind != "plain":
+        btn.setStyleSheet(f"border-radius: {15 if small else 19}px;")   # Pille; Qt kappt zu grosse Radien nicht
     btn.setFont(FONTS.f(11 if small else 12))
     if on_click:
         btn.clicked.connect(on_click)
@@ -1092,7 +1156,7 @@ class Badge(QLabel):
     def restyle(self):
         self.setStyleSheet(
             f"color: {T[self.fg]}; background: {T[self.bg]};"
-            f"border-radius: 0px; padding: 4px 14px;")
+            f"border-radius: 12px; padding: 4px 12px;")
 
 
 def restyle_labels(root: QWidget):
@@ -1271,11 +1335,11 @@ class MatrixView(QWidget):
                 color.setAlphaF(self._flash)
                 p.setPen(Qt.NoPen)
                 p.setBrush(color)
-                p.drawRect(band)
+                p.drawRoundedRect(band, 8, 8)
             if self.target == r and not self.editing:
                 p.setBrush(Qt.NoBrush)
                 p.setPen(QPen(qcolor("line"), 1.4))
-                p.drawRect(band)
+                p.drawRoundedRect(band, 8, 8)
 
             active = self.target == r and not self.editing
             p.setFont(FONTS.f(12, QFont.DemiBold if active else QFont.Normal))
@@ -1292,7 +1356,7 @@ class MatrixView(QWidget):
                     p.setPen(Qt.NoPen)
                     p.setBrush(qcolor("blue_soft"))
                     p.drawRoundedRect(
-                        QRectF(center.x() - 32, center.y() - 20, 64, 40), 0, 0)
+                        QRectF(center.x() - 32, center.y() - 20, 64, 40), 10, 10)
                 self._draw_value(p, center, self.matrix.rows[r][c],
                                  qcolor("blue") if is_pivot else qcolor("text"),
                                  is_pivot)
@@ -1405,9 +1469,9 @@ class HistoryRow(QFrame):
         dot.setFixedSize(24, 24)
         dot.setFont(FONTS.f(10, QFont.DemiBold))
         dot.setStyleSheet(
-            f"color: {'#ffffff' if current else T['sec']};"
+            f"color: {T['on_blue'] if current else T['sec']};"
             f"background: {T['blue'] if current else T['fill']};"
-            f"border-radius: 0px;")
+            f"border-radius: 12px;")
         lay.addWidget(dot)
         lay.addWidget(label(text, 11))
         lay.addStretch(1)
@@ -1438,7 +1502,7 @@ class Toast(QFrame):
         lay.addWidget(self.label)
         self.setFixedHeight(self.HEIGHT)
         self.setStyleSheet(
-            f"#toast {{ background: {T['card']}; border-radius: 0px;"
+            f"#toast {{ background: {T['card']}; border-radius: 20px;"
             f"border: 1px solid {T['line']}; }}")
         self.adjustSize()
         self.setFixedWidth(max(180, self.label.sizeHint().width() + 40))
@@ -1625,7 +1689,7 @@ class WalkthroughDialog(QDialog):
         card = QFrame()
         card.setObjectName("stepcard")
         card.setStyleSheet(
-            f"#stepcard {{ background: {T['card']}; border-radius: 0px;"
+            f"#stepcard {{ background: {T['card']}; border-radius: 12px;"
             f"border: 1px solid {T['hair']}; }}")
         lay = QVBoxLayout(card)
         lay.setContentsMargins(18, 16, 18, 16)
@@ -1663,7 +1727,7 @@ class ResultView(QScrollArea):
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.NoFrame)
         self.host = QWidget()
-        self.host.setObjectName("page")
+        self.host.setObjectName("reshost")
         self.lay = QVBoxLayout(self.host)
         self.lay.setContentsMargins(0, 0, 8, 0)
         self.lay.setSpacing(10)
@@ -1696,7 +1760,7 @@ class ResultView(QScrollArea):
         box = QFrame()
         box.setObjectName("errbox")
         box.setStyleSheet(f"#errbox {{ background: {T['red_soft']};"
-                          f"border-radius: 0px; }}")
+                          f"border-radius: 12px; }}")
         bl = QVBoxLayout(box)
         bl.setContentsMargins(16, 13, 16, 13)
         bl.addWidget(wrapped(message, 460, 12, "red"))
@@ -1722,7 +1786,7 @@ class ResultView(QScrollArea):
             box = QFrame()
             box.setObjectName("warnbox")
             box.setStyleSheet(f"#warnbox {{ background: {T['amber_soft']};"
-                              f"border-radius: 0px; }}")
+                              f"border-radius: 12px; }}")
             bl = QVBoxLayout(box)
             bl.setContentsMargins(14, 10, 14, 10)
             bl.addWidget(wrapped(warning, 460, 11, "amber"))
@@ -1741,7 +1805,7 @@ class ResultView(QScrollArea):
         card = QFrame()
         card.setObjectName("stepcard")
         card.setStyleSheet(f"#stepcard {{ background: {T['fill2']};"
-                           f"border-radius: 0px; }}")
+                           f"border-radius: 12px; }}")
         lay = QVBoxLayout(card)
         lay.setContentsMargins(16, 13, 16, 13)
         lay.setSpacing(5)
@@ -1774,7 +1838,7 @@ class ResultView(QScrollArea):
         card = QFrame()
         card.setObjectName("rescard")
         card.setStyleSheet(f"#rescard {{ background: {T['blue_soft']};"
-                           f"border-radius: 0px; }}")
+                           f"border-radius: 12px; }}")
         lay = QHBoxLayout(card)
         lay.setContentsMargins(16, 13, 16, 13)
         lay.setSpacing(20)
@@ -2817,7 +2881,7 @@ class VectorsPage(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(32, 26, 32, 30)
         outer.setSpacing(0)
-        outer.addWidget(label("Vektoren", 26, weight=QFont.Bold, display=True))
+        outer.addWidget(label("Vektoren", 34, weight=QFont.Bold, display=True))
         outer.addWidget(label("Skalar-, Vektor- und Spatprodukt, Winkel und "
                               "Projektion — mit Rechenweg und Zeichnung.",
                               13, "sec", display=True, wrap=True))
@@ -3686,7 +3750,7 @@ class RegressionPage(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(32, 26, 32, 30)
         outer.setSpacing(0)
-        outer.addWidget(label("Regression", 26, weight=QFont.Bold, display=True))
+        outer.addWidget(label("Regression", 34, weight=QFont.Bold, display=True))
         outer.addWidget(label("Die beste Gerade durch Messpunkte als orthogonale "
                               "Projektion auf den Spaltenraum — mit Rechenweg und "
                               "Zeichnung.", 13, "sec", display=True, wrap=True))
@@ -3964,7 +4028,7 @@ class HelpDialog(QDialog):
             box = QFrame()
             box.setObjectName("helpbox")
             box.setStyleSheet(
-                f"#helpbox {{ background: {T['fill2']}; border-radius: 0px; }}")
+                f"#helpbox {{ background: {T['fill2']}; border-radius: 12px; }}")
             bl = QVBoxLayout(box)
             bl.setContentsMargins(16, 13, 16, 13)
             bl.setSpacing(4)
@@ -4183,7 +4247,7 @@ class MoviePlayer(QWidget):
         self.screen = QLabel()
         self.screen.setAlignment(Qt.AlignCenter)
         self.screen.setStyleSheet(
-            f"background: {T['fill2']}; border-radius: 0px;")
+            f"background: {T['fill2']}; border-radius: 12px;")
         self.stage.addWidget(self.screen)
 
         self.video = None
@@ -4382,7 +4446,7 @@ class MoviePlayer(QWidget):
 
     def restyle(self):
         self.screen.setStyleSheet(
-            f"background: {T['fill2']}; border-radius: 0px;")
+            f"background: {T['fill2']}; border-radius: 12px;")
         self._paint_video_background()
 
 
@@ -4481,11 +4545,12 @@ class MainWindow(QMainWindow):
         page = QWidget()
         page.setObjectName("page")
         self.scroll.setWidget(page)
+        Atmosphere(page)
         page_lay = QVBoxLayout(page)
         page_lay.setContentsMargins(32, 30, 32, 34)
         page_lay.setSpacing(0)
 
-        self.hero = label("Lineare Gleichungssysteme, Zeile für Zeile.", 30,
+        self.hero = label("Lineare Gleichungssysteme, Zeile für Zeile.", 38,
                           weight=QFont.Bold, display=True, wrap=True)
         page_lay.addWidget(self.hero)
         self.lede = label("Matrix eingeben und selbst umformen – oder jeden "
@@ -4525,6 +4590,7 @@ class MainWindow(QMainWindow):
             holder.setWidgetResizable(True)
             holder.setFrameShape(QFrame.NoFrame)
             holder.setWidget(page)
+            Atmosphere(page)
             self.stack.addWidget(holder)
 
     def _build_matrix_card(self, parent_layout):
@@ -4845,60 +4911,66 @@ class MainWindow(QMainWindow):
         QWidget {{ color: {T['text']}; }}
         QMainWindow, #page, QStackedWidget {{ background: {T['bg']}; }}
         QScrollArea {{ background: transparent; }}
+        #reshost {{ background: transparent; }}
         #nav {{ background: {T['nav']}; }}
-        #card {{ background: {T['card']}; border-radius: 0px;
-                 border: {'1px' if T['dark'] else '2px'} solid {T['line']}; }}
-        #hint, #preview {{ background: {T['fill2']}; border-radius: 0px; }}
+        #card {{ background: {T['card']}; border-radius: 16px;
+                 border: 1px solid {T['line']}; }}
+        #card:hover {{ border-color: {T['line2']}; }}
+        #hint, #preview {{ background: {T['fill2']}; border-radius: 12px; }}
         #preview {{ padding: 13px 15px; color: {T['text']}; }}
-        #histhost {{ background: {T['fill2']}; border-radius: 0px; }}
-        #histrow {{ background: transparent; border-radius: 0px; }}
+        #histhost {{ background: {T['fill2']}; border-radius: 12px; }}
+        #histrow {{ background: transparent; border-radius: 8px; }}
         #histrow:hover {{ background: {T['fill']}; }}
-        #histrow_on {{ background: {T['blue_soft']}; border-radius: 0px; }}
-        QPushButton#primary {{ background: {T['blue']}; color: #ffffff;
-            border: none; border-radius: 0px; padding: 0 22px; }}
+        #histrow_on {{ background: {T['blue_soft']}; border-radius: 8px; }}
+        QPushButton#primary {{ background: {T['blue']}; color: {T['on_blue']};
+            border: none; border-radius: 19px; padding: 0 22px; }}
         QPushButton#primary:hover {{ background: {T['blue_hi']}; }}
+        QPushButton#primary:pressed {{ background: {T['blue_hi']}; padding-top: 1px; }}
         QPushButton#primary:disabled {{ background: {T['fill']};
             color: {T['ter']}; }}
-        QPushButton#secondary {{ background: {T['fill']}; color: {T['text']};
-            border: 1px solid {T['line']}; border-radius: 0px; padding: 0 18px; }}
-        QPushButton#secondary:hover {{ background: {T['line']}; color: {T['bg']}; }}
+        QPushButton#secondary {{ background: transparent; color: {T['text']};
+            border: 1px solid {T['line2']}; border-radius: 19px; padding: 0 18px; }}
+        QPushButton#secondary:hover {{ background: {T['fill']}; }}
+        QPushButton#secondary:pressed {{ background: {T['line']}; }}
         QPushButton#secondary:disabled {{ color: {T['ter']}; border-color: {T['hair']}; }}
         QPushButton#plain {{ background: transparent; color: {T['blue']};
             border: none; padding: 0 10px; }}
         QPushButton#plain:hover {{ text-decoration: underline; }}
         QPushButton#plain:disabled {{ color: {T['ter']}; }}
         QPushButton#dropdown {{ background: {T['fill']}; color: {T['text']};
-            border: none; border-radius: 0px; padding: 0 10px; text-align: left; }}
-        QPushButton#dropdown:hover {{ background: {T['line']}; color: {T['bg']}; }}
+            border: none; border-radius: 8px; padding: 0 10px; text-align: left; }}
+        QPushButton#dropdown:hover {{ background: {T['line']}; }}
         QLineEdit#cell {{ background: {T['entry']}; color: {T['text']};
-            border: 1px solid {T['line']}; border-radius: 0px; padding: 0 6px;
+            border: 1px solid {T['line2']}; border-radius: 8px; padding: 0 6px;
             selection-background-color: {T['blue']}; }}
-        QLineEdit#cell:focus {{ border: 2px solid {T['blue_hi']}; }}
+        QLineEdit#cell:focus {{ border: 2px solid {T['text']}; padding: 0 5px; }}
         QMenu {{ background: {T['card']}; color: {T['text']};
-            border: 1px solid {T['line']}; border-radius: 0px; padding: 5px; }}
-        QMenu::item {{ padding: 6px 22px; border-radius: 0px; }}
-        QMenu::item:selected {{ background: {T['blue']}; color: #ffffff; }}
+            border: 1px solid {T['line']}; border-radius: 12px; padding: 5px; }}
+        QMenu::item {{ padding: 6px 22px; border-radius: 8px; }}
+        QMenu::item:selected {{ background: {T['blue']}; color: {T['on_blue']}; }}
         QToolTip {{ background: {T['card']}; color: {T['text']};
             border: 1px solid {T['line']}; padding: 4px 8px; }}
         QScrollBar:vertical {{ background: transparent; width: 12px; margin: 2px; }}
-        QScrollBar::handle:vertical {{ background: {T['line']};
-            border-radius: 0px; min-height: 40px; }}
+        QScrollBar::handle:vertical {{ background: {T['line2']};
+            border-radius: 4px; min-height: 40px; }}
         QScrollBar::handle:vertical:hover {{ background: {T['ter']}; }}
         QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; width: 0; }}
         QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
         QScrollBar:horizontal {{ background: transparent; height: 12px; margin: 2px; }}
-        QScrollBar::handle:horizontal {{ background: {T['line']};
-            border-radius: 0px; min-width: 40px; }}
+        QScrollBar::handle:horizontal {{ background: {T['line2']};
+            border-radius: 4px; min-width: 40px; }}
         QDialog {{ background: {T['card']}; }}
         QProgressBar#progress {{ background: {T['fill']}; border: none;
-            border-radius: 0px; }}
-        QProgressBar#progress::chunk {{ background: {T['blue_hi']};
-            border-radius: 0px; }}
+            border-radius: 4px; }}
+        QProgressBar#progress::chunk {{ background: {T['blue']};
+            border-radius: 4px; }}
         """
         self.setStyleSheet(sheet)
         if hasattr(self, "anim_orb"):   # apply_theme läuft schon vor dem Bau der Karte
             self.anim_orb.set_colors([T['blue_hi'], T['text'], T['sec']])
         self.hairline.setStyleSheet(f"background: {T['line']};")
+        for atmos in self.findChildren(Atmosphere):
+            atmos.restyle()
         for card in (self.card_matrix, self.card_ops, self.card_hist,
                      self.card_result, self.card_wolfram, self.card_anim):
             card.restyle()
@@ -4919,8 +4991,11 @@ class MainWindow(QMainWindow):
         Gauss gegen Gauss-Jordan betrifft nur die erste Seite; auf den
         anderen bleibt die Leiste stehen, aber blass und stumm.
         """
+        changed = self.stack.currentIndex() != index
         self.stack.setCurrentIndex(index)
         self.seg_mode.set_enabled(index == 0)
+        if changed and self.isVisible():
+            fade_in(self.stack.currentWidget())
 
     def set_theme(self, index: int):
         T.clear()
@@ -5495,7 +5570,7 @@ class MainWindow(QMainWindow):
     def render_hint(self):
         if self.editing:
             self.hint.setStyleSheet(
-                f"#hint {{ background: {T['fill2']}; border-radius: 0px; }}")
+                f"#hint {{ background: {T['fill2']}; border-radius: 12px; }}")
             self.hint_op.setText("So geht es weiter")
             self.hint_op.setStyleSheet(f"color: {T['text']}; background: transparent;")
             self.hint_why.setText("Trage die Zahlen ein und starte das Umformen. "
@@ -5505,7 +5580,7 @@ class MainWindow(QMainWindow):
         nxt = self.matrix.next_step(self.jordan)
         if nxt is None:
             self.hint.setStyleSheet(
-                f"#hint {{ background: {T['green_soft']}; border-radius: 0px; }}")
+                f"#hint {{ background: {T['green_soft']}; border-radius: 12px; }}")
             form = "Reduzierte Zeilenstufenform" if self.jordan else "Zeilenstufenform"
             self.hint_op.setText(f"✓  {form} erreicht")
             self.hint_op.setStyleSheet(
@@ -5514,7 +5589,7 @@ class MainWindow(QMainWindow):
             self.btn_hint.hide()
             return
         self.hint.setStyleSheet(
-            f"#hint {{ background: {T['fill2']}; border-radius: 0px; }}")
+            f"#hint {{ background: {T['fill2']}; border-radius: 12px; }}")
         self.hint_op.setText(f"Vorschlag:  {nxt}")
         self.hint_op.setStyleSheet(f"color: {T['text']}; background: transparent;")
         self.hint_why.setText(nxt.reason)
@@ -5680,12 +5755,12 @@ class MainWindow(QMainWindow):
         if op is None:
             self.preview.setText(err)
             self.preview.setStyleSheet(
-                f"#preview {{ background: {T['fill2']}; border-radius: 0px;"
+                f"#preview {{ background: {T['fill2']}; border-radius: 12px;"
                 f"padding: 13px 15px; color: {T['ter']}; }}")
         else:
             self.preview.setText(str(op))
             self.preview.setStyleSheet(
-                f"#preview {{ background: {T['fill2']}; border-radius: 0px;"
+                f"#preview {{ background: {T['fill2']}; border-radius: 12px;"
                 f"padding: 13px 15px; color: {T['text']}; }}")
 
     def update_buttons(self):

@@ -57,7 +57,7 @@ APP_LIGHT = dict(
     seg=SURFACE, blue=INK_SOFT, blue_hi=INK, blue_soft=SURFACE_STRONG,
     on_blue="#ffffff", green=SUCCESS, green_soft="#e7f5ec", red=ERROR,
     red_soft="#fdecec", amber="#92600a", amber_soft="#fbf0dc", flash="#fbe9dc",
-    entry=SURFACE, shadow=1, dark=False)
+    entry=SURFACE, line2=HAIRLINE_STRONG, shadow=1, dark=False)
 
 APP_DARK = dict(
     bg=DARK, nav=DARK, card=DARK_ELEVATED, text="#ffffff", sec="#d6d3d1",
@@ -65,7 +65,7 @@ APP_DARK = dict(
     seg="#3a3532", blue="#ffffff", blue_hi="#e7e5e4", blue_soft="#292524",
     on_blue=INK, green="#4ade80", green_soft="#10281a", red="#f87171",
     red_soft="#331616", amber="#e0a93b", amber_soft="#33280f", flash="#3a2c20",
-    entry="#151211", shadow=0, dark=True)
+    entry="#151211", line2="#44403c", shadow=0, dark=True)
 
 # --- Zeichnungen (Matplotlib/Plotly) -----------------------------------
 # Mittlere Töne: tragen auf Weiss wie auf der dunklen Karte.
