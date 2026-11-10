@@ -81,3 +81,16 @@ ANIM_VECTORS = ["#5b8fc4", "#8a72c8", "#2f8f6f", "#d0703a"]
 ANIM_DARK = dict(background=DARK, text="#ffffff", muted=MUTED_SOFT, accent=LAVENDER,
                  highlight="#2a2536", pivot=SKY, good=MINT)
 ANIM_VECTORS_DARK = [SKY, LAVENDER, MINT, PEACH]
+
+
+def refresh_mpl_fonts() -> bool:
+    """Matplotlib kennt frisch installierte Schriften erst nach Neuaufbau seines Caches (einmal pro Prozess)."""
+    try:
+        import matplotlib.font_manager as fm
+        have = {f.name for f in fm.fontManager.ttflist}
+        if "Inter" not in have:
+            fm._load_fontmanager(try_read_cache=False)
+            have = {f.name for f in fm.fontManager.ttflist}
+        return "Inter" in have
+    except Exception:
+        return False

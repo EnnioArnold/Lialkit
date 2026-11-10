@@ -26,6 +26,7 @@ LIGHT = D.HAIRLINE_STRONG
 GRID = D.PLOT_GRID
 COLORS = list(D.PLOT_COLORS)
 
+D.refresh_mpl_fonts()
 _FONTS = D.FONT_UI + ["Liberation Sans"]
 _RC = {
     "font.family": "sans-serif", "font.sans-serif": _FONTS,
