@@ -2270,7 +2270,8 @@ def theme_figure(figure):
     for ax in figure.axes:
         spatial = hasattr(ax, "zaxis")
         ax.set_facecolor(card)
-        ax.title.set_color(text)
+        for ttl in (ax.title, ax._left_title, ax._right_title):
+            ttl.set_color(text)
         ax.tick_params(colors=sec, which="both")
         for spine in ax.spines.values():
             spine.set_color(line)
@@ -3693,7 +3694,7 @@ class MapsPage(QWidget):
                 self.plot.show_figure(
                     plot_abbildung(got[0], got[1], titel=got[2],
                                    transponiert=self.op == "transpose"),
-                    "Original in Rot, Bild in Schwarz."
+                    "Original in Lavendel, Bild in Tinte."
                     + (" Das Bild unter Aᵀ ist gestrichelt." if self.op == "transpose" else ""))
             except Exception as exc:
                 self.plot.show_message(f"Zeichnen ging nicht: {exc}")
@@ -3914,7 +3915,7 @@ class RegressionPage(QWidget):
             else:
                 self.plot.show_figure(
                     plot_regression(pts),
-                    "Daten in Rot, Gerade in Schwarz, Fehler gestrichelt."
+                    "Daten in Lavendel, Gerade in Tinte, Fehler gestrichelt."
                     + (" Rechts: b, die Ebene C(A) und die Projektion p." if len(pts) == 3 else ""))
         except Exception as exc:
             self.plot.show_message(f"Zeichnen ging nicht: {exc}")
@@ -4091,7 +4092,7 @@ class MapsHelpDialog(HelpDialog):
     ]
     FOOT_HEADING = "Zeichnung und Animation"
     FOOT = [
-        "Die Zeichnung zeigt das Original in Rot und das Bild in Schwarz. "
+        "Die Zeichnung zeigt das Original in Lavendel und das Bild in Tinte. "
         "Die Animation verformt das Einheitsgitter und die Figur stetig von "
         "der Identität zu A.",
         "Einträge wie cos 30° sind irrational und erscheinen auf vier "

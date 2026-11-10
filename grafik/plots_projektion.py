@@ -21,7 +21,7 @@ GRAU = GREY
 @_swiss
 def plot_skalarprodukt(a, b, titel: str = "", groesse: float = 5.5):
     """
-    Folie 8/9: a (rot) und b (schwarz) in der Ebene, dazu die Projektion von
+    Folie 8/9: a (Akzent) und b (Tinte) in der Ebene, dazu die Projektion von
     b auf a (grau gestrichelt, mit dem Lot) und der Winkel φ in der Überschrift.
     """
     import matplotlib.pyplot as plt
@@ -55,8 +55,8 @@ def plot_skalarprodukt(a, b, titel: str = "", groesse: float = 5.5):
 @_swiss
 def plot_regression(t, b=None, titel: str = "", groesse: float = 5.0):
     """
-    Folie 9 und 21: links die Datenpunkte (rot), die Regressionsgerade
-    (schwarz) und die Fehler (grau gestrichelt); bei genau drei Punkten rechts
+    Folie 9 und 21: links die Datenpunkte (Akzent), die Regressionsgerade
+    (Tinte) und die Fehler (grau gestrichelt); bei genau drei Punkten rechts
     dasselbe im Raum: b, die Ebene C(A), die Projektion p = Ax̂ und der Fehler e.
     """
     import matplotlib.pyplot as plt
@@ -100,7 +100,7 @@ def plot_regression(t, b=None, titel: str = "", groesse: float = 5.0):
 @_swiss
 def plot_mehrfachregression(X, y, titel: str = "", groesse: float = 5.0):
     """
-    Folien 12 und 18 bis 21: links beobachtetes y (rot) gegen vorhergesagtes ŷ
+    Folien 12 und 18 bis 21: links beobachtetes y (Akzent) gegen vorhergesagtes ŷ
     (liegt die Wolke auf der Diagonalen, ist R² nahe 1; Fehler e grau gestrichelt),
     rechts SQT, SQE und SQR als Balken (SQT = SQE + SQR).
     """

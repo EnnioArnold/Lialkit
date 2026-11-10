@@ -65,7 +65,7 @@ def _pfeil(ax, ziel, farbe, name: str, start=(0, 0)):
 def plot_abbildung(A, P=None, titel: str = "", groesse: float = 5.5,
                    transponiert: bool = False):
     """
-    Original (rot) und Bild (schwarz) einer Abbildung A, wie in der Musterlösung.
+    Original (Akzent) und Bild (Tinte) einer Abbildung A, wie in der Musterlösung.
 
     P sind die Punkte spaltenweise (Standard: das Einheitsquadrat); ein
     Buchstabe wie BUCHSTABE_F_AUFGABE geht genauso. Eine 3×3-Matrix wirkt auf
@@ -153,7 +153,7 @@ def plot_rotationsreihe(variante: str = "beide", F=BUCHSTABE_F_AUFGABE, T=(15, 0
     Aufgabe 2: der Buchstabe F für φ = 0°, 30°, …, 330°.
 
     variante "a": Rot(φ)·(F + T), "b": F + Rot(φ)·T, "beide": nebeneinander.
-    φ = 0° ist rot hervorgehoben.
+    φ = 0° ist im Akzent hervorgehoben.
     """
     import matplotlib.pyplot as plt
 
