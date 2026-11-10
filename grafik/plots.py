@@ -3,8 +3,8 @@
 Zeichnen: Vektoren, Geraden, Ebenen und Spate.
 
 Flaches mit Matplotlib — das passt zu euren Notebooks und lässt sich
-drucken. Gestaltung im Swiss Style wie die App: Schwarz/Weiss, ein rotes
-Akzentrot, keine Rundungen, schlichte Linien, Helvetica-artige Schrift. Räumliches zusätzlich mit Plotly, weil ein Spat erst verständlich
+drucken. Gestaltung wie die App (Tokens aus design.py): Tinte, ein ruhiger Lavendel-Akzent,
+Hairline-Gitter, Inter falls installiert. Räumliches zusätzlich mit Plotly, weil ein Spat erst verständlich
 wird, wenn man ihn drehen kann. Fehlt Plotly, fällt alles auf Matplotlib
 zurück, statt abzubrechen.
 """
@@ -15,35 +15,36 @@ import functools
 import math
 from typing import Sequence
 
+from .. import design as D
 from ..rechnen.core import Matrix, Vector, fmt
 
-# Swiss Style wie die App: Schwarz/Weiss, ein Rot (#e60000), Grautöne.
-INK = "#000000"
-RED = "#e60000"
-GREY = "#666666"
-LIGHT = "#d9d9d9"
-COLORS = [INK, RED, GREY, "#999999", "#333333", "#b30000"]
+# Tokens aus design.py: Tinte, ein ruhiger Lavendel-Akzent, Hairline-Gitter.
+INK = D.INK_SOFT
+RED = D.PLOT_ACCENT        # Name bleibt (API der Zeichenmodule): Original/Hervorhebung
+GREY = D.PLOT_MUTED
+LIGHT = D.HAIRLINE_STRONG
+GRID = D.PLOT_GRID
+COLORS = list(D.PLOT_COLORS)
 
-_FONTS = ["Helvetica Neue", "Helvetica", "Arial", "Liberation Sans",
-          "DejaVu Sans"]
+_FONTS = D.FONT_UI + ["Liberation Sans"]
 _RC = {
     "font.family": "sans-serif", "font.sans-serif": _FONTS,
     "font.size": 10.5, "axes.titlesize": 12, "axes.unicode_minus": True,
-    "figure.facecolor": "#ffffff", "axes.facecolor": "#ffffff",
-    "savefig.facecolor": "#ffffff", "text.color": INK,
-    "axes.labelcolor": INK, "axes.edgecolor": INK,
-    "xtick.color": "#333333", "ytick.color": "#333333",
-    "grid.color": "#e0e0e0", "grid.linewidth": 0.6,
-    "lines.solid_capstyle": "butt", "lines.solid_joinstyle": "miter",
-    "lines.dash_capstyle": "butt", "patch.linewidth": 1.0,
+    "figure.facecolor": D.SURFACE, "axes.facecolor": D.SURFACE,
+    "savefig.facecolor": D.SURFACE, "text.color": INK,
+    "axes.labelcolor": D.BODY, "axes.edgecolor": D.HAIRLINE_STRONG,
+    "xtick.color": D.MUTED, "ytick.color": D.MUTED,
+    "grid.color": GRID, "grid.linewidth": 0.8,
+    "lines.solid_capstyle": "round", "lines.solid_joinstyle": "round",
+    "lines.dash_capstyle": "round", "patch.linewidth": 1.0,
     "legend.frameon": False, "mathtext.fontset": "dejavusans",
 }
-_PLOTLY_FONT = dict(family="Helvetica Neue, Helvetica, Arial, sans-serif",
+_PLOTLY_FONT = dict(family="Inter, Helvetica Neue, Helvetica, Arial, sans-serif",
                     color=INK)
 
 
 def _swiss(fn):
-    """Zeichenfunktion im Swiss-Design-Stil (rc_context) ausführen."""
+    """Zeichenfunktion im Design-Stil (rc_context) ausführen; Name aus Alt-Zeiten."""
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         import matplotlib.pyplot as plt
@@ -55,7 +56,7 @@ def _swiss(fn):
 def _plotly_layout(figure, title, height):
     figure.update_layout(
         title=title or None, template="simple_white", height=height,
-        font=_PLOTLY_FONT, paper_bgcolor="#ffffff",
+        font=_PLOTLY_FONT, paper_bgcolor=D.SURFACE,
         margin=dict(l=0, r=0, t=40 if title else 10, b=0))
 
 
@@ -113,8 +114,8 @@ def _apply_limits_mpl(ax, lims):
 
 def _scene_axes(lims):
     """Plotly: Achsenbereiche ab 0, gleiche Massstäbe."""
-    ax = dict(gridcolor="#e0e0e0", zerolinecolor=INK, linecolor=INK,
-              backgroundcolor="#ffffff", showbackground=False)
+    ax = dict(gridcolor=GRID, zerolinecolor=D.HAIRLINE_STRONG, linecolor=D.HAIRLINE_STRONG,
+              backgroundcolor=D.SURFACE, showbackground=False)
     return dict(aspectmode="data",
                 xaxis=dict(title="x", range=list(lims[0]), **ax),
                 yaxis=dict(title="y", range=list(lims[1]), **ax),
@@ -126,7 +127,7 @@ def _style_3d(ax, title: str = ""):
     for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
         axis.pane.set_facecolor((1, 1, 1, 0))
         axis.pane.set_edgecolor(LIGHT)
-        axis._axinfo["grid"].update(color="#e0e0e0", linewidth=0.6)
+        axis._axinfo["grid"].update(color=GRID, linewidth=0.6)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
@@ -136,14 +137,14 @@ def _style_3d(ax, title: str = ""):
 
 def _style_2d(ax, title: str = ""):
     ax.set_aspect("equal", adjustable="box")
-    ax.grid(True, color="#e0e0e0", linewidth=0.6)
+    ax.grid(True, color=GRID, linewidth=0.6)
     ax.set_axisbelow(True)
-    ax.axhline(0, color=INK, linewidth=1)
-    ax.axvline(0, color=INK, linewidth=1)
+    ax.axhline(0, color=D.HAIRLINE_STRONG, linewidth=1.0, zorder=1)
+    ax.axvline(0, color=D.HAIRLINE_STRONG, linewidth=1.0, zorder=1)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     for side in ("left", "bottom"):
-        ax.spines[side].set_color(INK)
+        ax.spines[side].set_color(D.HAIRLINE_STRONG)
     ax.tick_params(length=3)
     if title:
         ax.set_title(title, fontsize=12, loc="left", pad=12)
@@ -397,7 +398,7 @@ def plot_plane(plane, span=(-2, 2), points=None, title: str = "",
             y=[[p[1] for p in row] for row in surface],
             z=[[p[2] for p in row] for row in surface],
             opacity=0.55, showscale=False,
-            colorscale=[[0, "#e0e0e0"], [1, "#999999"]], name="Ebene")]
+            colorscale=[[0, GRID], [1, D.MUTED_SOFT]], name="Ebene")]
         px, py, pz = _floats(plane.p)
         nx, ny, nz = _floats(plane.n.normalized()
                              if not plane.n.is_zero() else plane.n)
@@ -426,7 +427,7 @@ def plot_plane(plane, span=(-2, 2), points=None, title: str = "",
         np.array([[p[0] for p in row] for row in surface], dtype=float),
         np.array([[p[1] for p in row] for row in surface], dtype=float),
         np.array([[p[2] for p in row] for row in surface], dtype=float),
-        alpha=0.35, color="#999999", edgecolor="none")
+        alpha=0.35, color=D.MUTED_SOFT, edgecolor="none")
     px, py, pz = _floats(plane.p)
     nx, ny, nz = _floats(plane.n)
     ax.quiver(px, py, pz, nx, ny, nz, color=RED, linewidth=2,

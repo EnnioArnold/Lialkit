@@ -3,8 +3,8 @@
 Zeichnungen zu SW 5/6 (lineare Abbildungen): Original und Bild, Basiswechsel
 und die Drehreihen aus Aufgabe 2.
 
-Gestaltung wie in plots.py (Swiss Style): Schwarz/Weiss, das Original in
-Rot (#e60000), das Bild in Schwarz, keine Rundungen. Matplotlib mit
+Gestaltung wie in plots.py (Tokens aus design.py): das Original im Lavendel-
+Akzent, das Bild in Tinte, Hairline-Gitter. Matplotlib mit
 beliebigem Backend, also auch Agg ohne Fenster.
 """
 
@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import math
 
+from .. import design as D
 from ..rechnen.abbildung import (BASIS_FOLIE_6, BUCHSTABE_F_AUFGABE,
                                  BUCHSTABE_F_FOLIEN, EINHEITSQUADRAT, PHI_REIHE,
                                  abbilden, punkte, rotationsreihe,
                                  transponierte_abbildung)
 from ..rechnen.core import Matrix, Vector
-from .plots import INK, RED, _finish, _style_2d, _swiss
+from .plots import GREY, GRID, INK, RED, _finish, _style_2d, _swiss
 
 
 def _schritt(spanne: float) -> float:
@@ -86,10 +87,12 @@ def plot_abbildung(A, P=None, titel: str = "", groesse: float = 5.5,
         tx, ty = _zeilen(transponierte_abbildung(A, P).bild)
     fig, ax = _figur(plt, 1, px + qx + tx, py + qy + ty, groesse)
     _style_2d(ax, titel)
+    ax.fill(px, py, color=D.LAVENDER, alpha=0.35, lw=0, zorder=2)   # Pastell nur als Fläche
+    ax.fill(qx, qy, color=D.SKY, alpha=0.25, lw=0, zorder=2)
     ax.plot(px, py, color=RED, lw=3, label="Original", zorder=3)
     ax.plot(qx, qy, color=INK, lw=1.6, label="Bild", zorder=4)
     if transponiert:
-        ax.plot(tx, ty, color="#86868b", lw=1.6, ls="--", label="Bild unter $A^T$", zorder=4)
+        ax.plot(tx, ty, color=GREY, lw=1.6, ls="--", label="Bild unter $A^T$", zorder=4)
     _grenzen(ax, px + qx + tx, py + qy + ty)
     ax.legend(loc="best", fontsize=10)
     fig.tight_layout()
@@ -124,10 +127,10 @@ def plot_basiswechsel(f1=BASIS_FOLIE_6[0], f2=BASIS_FOLIE_6[1],
         for i in range(-n, n + 1):          # Gitterlinien parallel zu b und a
             ax.plot([i * a[0] - n * b[0], i * a[0] + n * b[0]],
                     [i * a[1] - n * b[1], i * a[1] + n * b[1]],
-                    color="#e0e0e0", lw=0.6, zorder=1)
+                    color=GRID, lw=0.6, zorder=1)
             ax.plot([i * b[0] - n * a[0], i * b[0] + n * a[0]],
                     [i * b[1] - n * a[1], i * b[1] + n * a[1]],
-                    color="#e0e0e0", lw=0.6, zorder=1)
+                    color=GRID, lw=0.6, zorder=1)
         ax.plot(xs + xs[:1], ys + ys[:1], color=RED if ax is links else INK,
                 lw=2, zorder=3)
         ax.plot([xs[punkt]], [ys[punkt]], marker="s", ms=6, color=INK, zorder=5)

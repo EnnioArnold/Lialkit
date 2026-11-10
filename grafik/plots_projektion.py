@@ -3,8 +3,8 @@
 Zeichnungen zu SW 7 und 8: Skalarprodukt mit Projektion, Regressionsgerade
 mit Fehlern und die Projektion auf den Spaltenraum.
 
-Gestaltung wie in plots.py (Swiss Style): Schwarz/Weiss, rot für das
-Gegebene, schwarz für das Ergebnis, grau gestrichelt für Hilfslinien.
+Gestaltung wie in plots.py: Akzent (Lavendel) für das Gegebene, Tinte für das
+Ergebnis, grau gestrichelt für Hilfslinien.
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from __future__ import annotations
 from ..rechnen.core import Vector
 from ..rechnen.multiple_regression import mehrfachregression
 from ..rechnen.regression import regression
-from .plots import INK, RED, _finish, _style_2d, _style_3d, _swiss
+from .plots import GREY, GRID, INK, RED, _finish, _style_2d, _style_3d, _swiss
 from .plots_abbildung import _figur, _grenzen, _pfeil
 
-GRAU = "#86868b"
+GRAU = GREY
 
 
 @_swiss

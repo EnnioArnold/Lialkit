@@ -2289,7 +2289,7 @@ def theme_figure(figure):
             if child.get_linestyle() == "-" and child.get_linewidth() <= 1.01:
                 child.set_color(sec)
             elif (getattr(child, "_lk_ink", False)
-                  or str(child.get_color()).lower() in ("#000000", "k", "black")):
+                  or str(child.get_color()).lower() in (D.INK_SOFT, "k", "black")):
                 # Schwarze Datenlinien (das Bild einer Abbildung): sonst im
                 # Dunkelmodus unsichtbar. Gemerkt, damit der Rückwechsel klappt.
                 child._lk_ink = True
@@ -2304,7 +2304,7 @@ def theme_figure(figure):
                            or getattr(legend, "legendHandles", [])):
                 if (hasattr(handle, "get_color") and
                         (getattr(handle, "_lk_ink", False)
-                         or str(handle.get_color()).lower() in ("#000000", "k", "black"))):
+                         or str(handle.get_color()).lower() in (D.INK_SOFT, "k", "black"))):
                     handle._lk_ink = True
                     handle.set_color(text)
 
