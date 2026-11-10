@@ -280,8 +280,13 @@ App, Zeichnungen (Matplotlib) und Animationen (Manim) lesen daraus. Look: warmes
 Off-White (`#f5f5f5`) mit Tinte, weisse Karten mit Hairline und 16 px Radius,
 Pillen-Buttons, Pastell-Orbs nur als Atmosphäre; Dunkelmodus mit Tinten-Canvas
 `#0c0a09` und Karten `#1c1917`. Schriften: Inter für die Oberfläche, EB Garamond
-Light für Überschriften (Ersatz für Waldenburg); sie werden nur benutzt, wenn
-installiert, sonst Helvetica/Georgia. Es liegen keine Fontdateien im Repo.
+Light (Gewicht 300) für Überschriften (Ersatz für Waldenburg). Sie werden in App,
+Plots und Animation benutzt, sobald sie installiert sind (z. B. in `~/Library/Fonts`);
+sonst Fallback Helvetica/Georgia (Georgia hat kein Light, die Überschriften wirken
+dann kräftiger). Es liegen keine Fontdateien im Repo. Matplotlib baut seinen
+Font-Cache beim ersten Start nach der Installation einmal neu auf. Die Karten werfen
+beim Überfahren einen leisen Schatten, Seitenwechsel blenden 200 ms ein. Die
+kleinste Fensterbreite ist 1180 px, damit die Navigationsleiste passt.
 
 Quelle: getdesign.md, ElevenLabs DESIGN.md. Das ist eine unabhängige Analyse
 und Nachbildung der Gestaltungsprinzipien, kein Produkt von und nicht verbunden
