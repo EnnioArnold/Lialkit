@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Die Übungsaufgaben aus den Semesterwochen 1 bis 8.
+Die Übungsaufgaben aus den Semesterwochen 1 bis 9.
 
 Die Aufgaben stehen hier als Daten, nicht als fertige Antworten. Du holst
 dir eine Aufgabe, rechnest selbst und vergleichst — das ist der Zweck.
@@ -294,6 +294,19 @@ _add(Exercise(
     "Wie lautet die Projektionsmatrix P = A(AᵀA)⁻¹Aᵀ für A = (1 0; 1 1; 1 2)?",
     {"A": _m([[1, 0], [1, 1], [1, 2]])}, "projektionsmatrix", _FOLIE))
 
+# SW9: nur Folien, keine Aufgabenstellung und keine Musterlösung. Das einzige
+# durchgerechnete Beispiel (Gewichtheber, Folien 5 bis 21) wird als Aufgabe
+# aufgenommen; die Zahlen auf den Folien dienen als Kontrolle.
+_add(Exercise(
+    "SW9.F5", "SW9", "Gewichtheber: multiple lineare Regression (Folien 5 bis 21)",
+    "Aus Training (h/Woche) und Proteinzufuhr (g/kg/Tag) das maximale Gewicht "
+    "vorhersagen: b̂, P, Q, SQT, SQR und das Bestimmtheitsmass R² berechnen.",
+    {"X": Matrix([["2", "1.1"], ["2", "1.9"], ["4", "2"], ["5", "1.5"], ["7", "2.1"]]),
+     "y": Vector([93, 106, 146, 140, 158])},
+    "mehrfachregression",
+    "Die Folien stellen keine Frage; die Teilaufgaben sind aus dem Beispiel abgeleitet. "
+    "Kontrolle (Folien 14, 15, 21): SQT = 3075.2, R² ≈ 0.9061. " + _FOLIE))
+
 
 # ==========================================================================
 # Zugriff
@@ -404,6 +417,10 @@ def loese(key: str, weg: bool = True, decimal: bool = False):
     if ex.method == "regression":
         from ..rechnen.regression import regression
         return regression(data["t"], data["b"], decimal=decimal)
+
+    if ex.method == "mehrfachregression":
+        from ..rechnen.multiple_regression import mehrfachregression
+        return mehrfachregression(data["X"], data["y"], decimal=decimal)
 
     if ex.method == "projektionsmatrix":
         from ..rechnen.regression import projektionsmatrix
