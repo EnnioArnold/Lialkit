@@ -1,10 +1,11 @@
 # lialkit
 
 Lineare Algebra mit nachvollziehbarem Rechenweg, gebaut zum Modul
-I.BA_LIAL_MM.20 der HSLU. Deckt die Semesterwochen 1 bis 8 ab: Gauss, LR-Zerlegung,
+I.BA_LIAL_MM.20 der HSLU. Deckt die Semesterwochen 1 bis 9 ab: Gauss, LR-Zerlegung,
 Inverse und Determinante, Vektorrechnung, lineare Abbildungen (SW5 und SW6),
 Skalarprodukt, orthogonale Abbildungen und homogene Koordinaten (SW7) sowie
-lineare Regression mit orthogonaler Projektion (SW8).
+lineare Regression mit orthogonaler Projektion (SW8) und multiple lineare
+Regression mit Bestimmtheitsmass (SW9).
 
 ## Installieren
 
@@ -39,7 +40,7 @@ nicht auseinanderlaufen.
 app/        das Fenster (lialkit_qt.py)
 rechnen/    Rechenkern: core, render, solving, factor, inverse, determinant,
             vectors und abbildung (SW5/6), skalarprodukt und homogen_3d (SW7),
-            regression (SW8)
+            regression (SW8), multiple_regression (SW9)
 grafik/     Zeichnungen (plots, plots_abbildung, plots_projektion) und Animationen (anim)
 aufgaben/   Übungsaufgaben (exercises) und Vorlage zum Selbstprüfen (uebung)
 docs/       Architektur-Diagramm
@@ -114,9 +115,27 @@ lk.plot_regression([(0, 6), (1, 0), (2, 0)])  # Gerade, Fehler; bei drei Punkten
 Sind die Spalten von A linear abhängig, bricht die Rechnung mit der
 Begründung von Folie 22 ab (AᵀA ist dann nicht invertierbar).
 
-**Offen (TODO):** Für SW7 und SW8 gibt es weder Animationen noch ein
+## Multiple lineare Regression (SW9)
+
+```python
+r = lk.mehrfachregression(lk.GEWICHTHEBER_X, lk.GEWICHTHEBER_Y)   # Folien 5 bis 21
+r.b                                  # b̂ = (XᵀX)⁻¹Xᵀy, Einserspalte wird ergänzt
+r.yhat, r.e                          # ŷ = Py, e = Qy
+r.P, r.Q, r.M                        # Hut-Matrix, Residualmatrix, zentrierende Matrix
+r.sqt, r.sqe, r.sqr, r.r2            # 3075.2, …, 288.70, R² = 1 − SQR/SQT ≈ 0.9061
+r.vorhersage([3, 1.5])               # Zielgrösse zu einem Einflussvektor
+lk.zentriermatrix(5)                 # M = I − 11ᵀ/m (Folie 21)
+lk.residualmatrix(X)                 # Q = I − X(XᵀX)⁻¹Xᵀ (Folie 13)
+lk.plot_mehrfachregression(X, y)     # y gegen ŷ und SQT = SQE + SQR
+```
+
+Sind die Einflussgrössen korreliert (Spalten von X linear abhängig), bricht die
+Rechnung mit der Begründung von Folie 22 ab. Der Rechenweg prüft P² = P, Pᵀ = P
+und Xᵀe = 0.
+
+**Offen (TODO):** Für SW7 bis SW9 gibt es weder Animationen noch ein
 Übungsblatt oder eine Musterlösung. Die Folien-Aufgaben (SW7.F23, SW8.F14,
-F18, F19) sind aufgenommen und im Hinweis als »ohne Musterlösung« gekennzeichnet;
+F18, F19, SW9.F5) sind aufgenommen und im Hinweis als »ohne Musterlösung« gekennzeichnet;
 ihre Lösungen rechnet das Kit selbst. Die 3D-Matrizen haben noch keine
 Zeichnung. Auf Folie 23 steht kein Drehwinkel; SW7.F23 nimmt 90°. In den Notizen
 zu SW8 steht »aᵀb transponiert anschauen«: das Skalarprodukt aᵀb ist in
@@ -137,12 +156,12 @@ sie exakt: `|(3,4)| = 5`, nicht `5.0000`.
 ```python
 from lialkit.exercises import liste, aufgabe, loese
 
-liste('SW8')          # welche es gibt (SW1 bis SW8)
+liste('SW8')          # welche es gibt (SW1 bis SW9)
 aufgabe('SW3.1a')     # die Angabe
 loese('SW3.1a')       # durchgerechnet
 ```
 
-Enthalten sind die Aufgaben der Wochen 1 bis 8, zuletzt SW5.1a–e und SW5.2a/b
+Enthalten sind die Aufgaben der Wochen 1 bis 9, zuletzt SW5.1a–e und SW5.2a/b
 (lineare Abbildungen). Das Blatt von SW6 ist dasselbe; es steht als
 SW6.1a–e und SW6.2a/b mit denselben Daten und Lösungen noch einmal da.
 
@@ -150,6 +169,11 @@ Für SW7 und SW8 gibt es nur die Folien (kein Blatt, keine Musterlösung). Darau
 sind die gestellten Fragen als SW7.F23 (Drehung um ein Zentrum) und SW8.F14, F18,
 F19 (Projektion, Regression, Projektionsmatrix) aufgenommen; `loese` rechnet sie,
 eine Lösung der Dozierenden liegt aber nicht vor.
+
+Auch SW9 hat nur Folien und stellt keine Frage. Das Beispiel der Gewichtheber
+(Folien 5 bis 21) ist als SW9.F5 aufgenommen und im Hinweis als »keine
+Musterlösung« gekennzeichnet; die Teilaufgaben (b̂, P, Q, SQT, SQR, R²) sind aus
+dem Beispiel abgeleitet, die Zahlen der Folien dienen als Kontrolle.
 
 **Eine Aufgabe ist bewusst offen gelassen:** SW3 Aufgabe 3 verlangt, dass
 du den LR-Algorithmus selbst programmierst. Dafür gibt es ein Gerüst mit
@@ -191,9 +215,10 @@ rotes Akzent, keine Rundungen), hell oder dunkel. Fünf Ansichten:
 - **Abbildungen** — Skalierung, Drehung, Spiegelung, Scherung, Zusammensetzung;
   aus der Bildfigur die Matrix ablesen; Transponierte (SW6); eigene Punkte statt
   Quadrat oder F; Orthogonal prüfen und Abbildung um ein Zentrum (SW7)
-- **Regression** (SW8) — Regressionsgerade durch eigene Datenpunkte mit
+- **Regression** (SW8, SW9) — Regressionsgerade durch eigene Datenpunkte mit
   Vorhersage, Projektionsmatrix; die Zeichnung zeigt bei drei Punkten auch den
-  Spaltenraum
+  Spaltenraum. Die Rechnung »Multiple Regression« nimmt Beobachtungen
+  (x₁, …, xₙ, y) und zeigt b̂, P, Q, SQT, SQR und R²
 
 Alle Seiten zeigen ihr Ergebnis als Karte mit drei Ansichten:
 **Rechenweg**, **Zeichnung** und **Animation**.
@@ -236,6 +261,10 @@ SQR = 6 und die Projektionsmatrix von Folie 19, P = ⅙·(5 2 −1; 2 2 2; −1 
 Die Aufgaben SW7.F23 und SW8.F14/F18/F19 haben keine Musterlösung; ihre
 Ergebnisse sind von Hand und mit dem Normalgleichungs-Test nachgerechnet.
 
+SW9: Gewichtheber-Beispiel Folien 5 bis 21: P (Folie 14, z. B. P₁₁ = 0.76946632),
+ŷ und e (Folien 14 und 15), SQT = 3075.2, SQR ≈ 288.7047 und R² ≈ 0.9061 (Folie 21);
+dazu die Probe, dass eine Einflussgrösse die Gerade aus SW8 ergibt.
+
 SW6: Folie 7 (Q = A·P mit f₁ = (3, −1)ᵀ, f₂ = (−1, 2)ᵀ) und die Musterlösung
 lial-sw-06-loesungen.pdf (Aufgabe 1a, 1c, 1d). Neu hinzugekommen ist nur die
 Transponierte.
@@ -248,6 +277,6 @@ der beiden singulären Matrizen. Die LR-Zerlegungen aus SW3 sind über
 ## Tests
 
 ```bash
-python3 tests/tests_abbildung.py    # ebenso sw6, sw7, sw8, core, gauss, factor, inverse,
+python3 tests/tests_abbildung.py    # ebenso sw6, sw7, sw8, sw9, core, gauss, factor, inverse,
 python3 tests/tests_determinant.py  # vectors, exercises, plots, anim, app
 ```
