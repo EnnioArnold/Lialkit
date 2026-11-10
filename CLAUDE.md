@@ -15,7 +15,7 @@ darum muss ein Ordner `lialkit` (oder Symlink darauf) im Elternordner liegen / a
 2. Rechnen: neue Funktionen in `rechnen/<thema>.py` (Name deutsch, Docstring, Rückgabe `*Result` mit `Step`s, `decimal=`-Argument, keine Breaking Changes).
 3. Export: in `__init__.py` importieren, in `__all__`, in `info()` und im Modul-Docstring eintragen.
 4. Grafik/Animation: `grafik/plots_*.py` (Dekorator `@_swiss`), ggf. Szene in `grafik/anim.py`.
-5. Aufgaben: in `aufgaben/exercises.py` als `Exercise("SW<n>.<x>", "SW<n>", ...)` mit Daten aus dem Blatt; `loese()` um neue `method` erweitern; Lösungen nur aus `lial-sw-0n-loesungen.pdf`, Unklares als TODO. Gibt es kein Blatt (SW7/SW8: nur Folien), nur die Fragen der Folien aufnehmen (Schlüssel `SW<n>.F<folie>`), im `note` als »keine Musterlösung vorhanden« kennzeichnen und nichts erfinden.
+5. Aufgaben: in `aufgaben/exercises.py` als `Exercise("SW<n>.<x>", "SW<n>", ...)` mit Daten aus dem Blatt; `loese()` um neue `method` erweitern; Lösungen nur aus `lial-sw-0n-loesungen.pdf`, Unklares als TODO. Gibt es kein Blatt (SW7/SW8/SW9: nur Folien), nur die Fragen der Folien aufnehmen (Schlüssel `SW<n>.F<folie>`), im `note` als »keine Musterlösung vorhanden« kennzeichnen und nichts erfinden.
 6. App: Rechnung/Seite in `app/lialkit_qt.py` registrieren (z. B. `VECTOR_OPS`, `MAP_OPS`, Hilfedialog; neue Seite hinten an `seg_page`/`stack` anhängen und in den drei Schleifen über die Seiten nachtragen), bestehende Indizes nicht verschieben.
 7. Doku: README (Wochenzahl, Abschnitt, Fenster, »Geprüft gegen«, Tests), Docstring-Kopf `__init__.py`.
 8. Tests: neues `tests/tests_<thema>.py` mit Beispielen aus Folien/Lösungen; ganze Suite laufen lassen (alle `tests/tests_*.py`), App headless prüfen.
