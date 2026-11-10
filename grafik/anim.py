@@ -345,13 +345,15 @@ INSTALL_HINT = ("pip install manimgx   # Rendering und Videoausgabe in einem Pak
 def _pick_font() -> str | None:
     """Eine Serifenschrift im Stil von Computer Modern, die auf dem Rechner da ist (sonst der Standard der Engine)."""
     if engine() == "manimgx":
-        return "Noto Serif"                        # bringt manimgx selbst mit
+        # manimgx findet Systemschriften (geprüft mit Inter und EB Garamond);
+        # Inter wie in der App, sonst die mitgelieferte Noto Serif.
+        return "Inter" if D.refresh_mpl_fonts() else "Noto Serif"
     try:
         import manimpango
         have = set(manimpango.list_fonts())
     except Exception:
         return None
-    for name in ("EB Garamond", "CMU Serif", "Latin Modern Roman", "STIX Two Text", "Georgia",
+    for name in ("Inter", "EB Garamond", "CMU Serif", "Latin Modern Roman", "STIX Two Text", "Georgia",
                  "Times New Roman", "DejaVu Serif"):
         if name in have:
             return name
@@ -405,9 +407,9 @@ def _orbs(mod, theme):
     dark = theme.background.lower() == D.DARK
     for x, y, r, col in ((4.6, 2.4, 3.2, D.LAVENDER), (-4.8, 2.8, 2.6, D.SKY),
                          (5.4, -2.6, 2.4, D.PEACH), (0.5, 3.6, 2.2, D.MINT)):
-        for k in range(1, 25):
-            group.add(mod.Circle(radius=r * k / 24, stroke_width=0, fill_color=col,
-                                 fill_opacity=0.004 if dark else 0.0166).move_to([x, y, 0]))
+        for k in range(1, 49):
+            group.add(mod.Circle(radius=r * k / 48, stroke_width=0, fill_color=col,
+                                 fill_opacity=0.002 if dark else 0.0083).move_to([x, y, 0]))
     return group
 
 
