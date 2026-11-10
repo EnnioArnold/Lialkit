@@ -248,6 +248,17 @@ def test_week7_8():
         r.pts_edit.setText("nix")
         r.compute()
         assert r.lbl_err.text()
+        # SW9: multiple Regression (Gewichtheber, Folie 21)
+        r.set_op("Multiple Regression")
+        r.t_edit.setText("3, 1.5")
+        r.compute()
+        assert abs(float(r.result().r2) - 0.9061183908658075) < 1e-9 and not r.lbl_err.text()
+        assert "R²" in r.lbl_pred.text()
+        r.draw()
+        assert r.plot.figure is not None
+        r.multi_edit.setText("(1,2) (2,3)")
+        r.compute()
+        assert r.lbl_err.text()
         w.set_theme(1)                                       # restyle aller Seiten
         w.set_theme(0)
     finally:
