@@ -357,7 +357,8 @@ with tempfile.TemporaryDirectory() as tmp:
     lines = [l for l in ax.get_lines() if len(l.get_xdata()) == 5]
     check(len(lines) >= 2, "Quadrat: Original und Bild")
     farben = {l.get_label(): l.get_color() for l in ax.get_lines() if l.get_label() in ("Original", "Bild")}
-    check(farben == {"Original": "#e60000", "Bild": "#000000"}, f"Swiss: Rot für das Original, Schwarz fürs Bild: {farben}")
+    from lialkit import design as D
+    check(farben == {"Original": D.PLOT_ACCENT, "Bild": D.INK_SOFT}, f"Tokens: Akzent für das Original, Tinte fürs Bild: {farben}")
     check(ax.get_aspect() in (1.0, "equal"), "gleiche Achsenmassstäbe")
     bild = [l for l in ax.get_lines() if l.get_label() == "Bild"][0]
     check(list(bild.get_xdata()) == [0, 2, 2, 0, 0] and list(bild.get_ydata()) == [0, 0, 2, 2, 0],
