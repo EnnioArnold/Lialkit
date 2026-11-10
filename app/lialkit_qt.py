@@ -2820,8 +2820,8 @@ class AnimationPane(QWidget):
 
 
 def anim_theme():
-    """Die Animation hat immer den 3Blue1Brown-Look, unabhängig vom Thema."""
-    return gauss_anim.Theme()
+    """Die Animation folgt dem App-Thema (hell: Canvas und Tinte, dunkel: Tinten-Grund)."""
+    return gauss_anim.Theme.dark() if T["dark"] else gauss_anim.Theme()
 
 
 def output_card(page, parent_layout):
@@ -5376,8 +5376,7 @@ class MainWindow(QMainWindow):
     # -- Animation --------------------------------------------------------
 
     def _anim_theme(self) -> "gauss_anim.Theme":
-        """Die Animation hat immer den 3Blue1Brown-Look, unabhängig vom Thema."""
-        return gauss_anim.Theme()
+        return anim_theme()
 
     def _update_anim_card(self):
         if not self.anim_ready:

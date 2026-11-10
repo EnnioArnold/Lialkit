@@ -78,3 +78,6 @@ PLOT_MUTED = "#8c857f"
 ANIM = dict(background=CANVAS, text=INK, muted=MUTED, accent="#8a72c8",
             highlight="#e6dff0", pivot="#5b8fc4", good="#2f8f6f")
 ANIM_VECTORS = ["#5b8fc4", "#8a72c8", "#2f8f6f", "#d0703a"]
+ANIM_DARK = dict(background=DARK, text="#ffffff", muted=MUTED_SOFT, accent=LAVENDER,
+                 highlight="#2a2536", pivot=SKY, good=MINT)
+ANIM_VECTORS_DARK = [SKY, LAVENDER, MINT, PEACH]

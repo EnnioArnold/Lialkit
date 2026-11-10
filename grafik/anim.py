@@ -3,8 +3,8 @@
 Manim-Animationen zur linearen Algebra: Gauss-Elimination, Pivots,
 Vektorprodukte.
 
-Look wie bei 3Blue1Brown: schwarzer Grund, die Manim-Farben Blau, Gelb,
-Grün und Rot, Serifenschrift (am nächsten an Computer Modern).
+Look aus design.py: heller Canvas mit Tinte und Pastell-Akzenten (oder Tinten-
+Grund im Dunkelmodus), Serifenschrift (am nächsten an Computer Modern).
 
 Engine: manimgx wird bevorzugt (schnell, bringt die Videoausgabe selbst mit,
 kein ffmpeg und kein Cairo/Pango nötig). Ist es nicht installiert, fällt
@@ -41,6 +41,8 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Callable, Sequence
 
+from .. import design as D
+
 # --------------------------------------------------------------------------
 # Auftragsbeschreibung — kennt weder Manim noch Qt
 # --------------------------------------------------------------------------
@@ -56,14 +58,18 @@ QUALITIES = {
 
 @dataclass
 class Theme:
-    """Farben der Animation: die Palette von 3Blue1Brown auf Schwarz."""
-    background: str = "#000000"
-    text: str = "#ffffff"
-    muted: str = "#888888"         # GREY_B
-    accent: str = "#ffff00"        # YELLOW: Hervorhebung, Bögen, Flächen
-    highlight: str = "#1c3a45"     # Zeilenband bei einer Operation
-    pivot: str = "#58c4dd"         # BLUE: Pivotfeld (wird halbtransparent gefüllt)
-    good: str = "#83c167"          # GREEN: Lösungszeilen
+    """Farben der Animation (Tokens aus design.py): Canvas, Tinte, Pastell."""
+    background: str = D.ANIM["background"]
+    text: str = D.ANIM["text"]
+    muted: str = D.ANIM["muted"]
+    accent: str = D.ANIM["accent"]        # Hervorhebung, Bögen, Flächen
+    highlight: str = D.ANIM["highlight"]  # Zeilenband bei einer Operation
+    pivot: str = D.ANIM["pivot"]          # Pivotfeld (halbtransparent gefüllt)
+    good: str = D.ANIM["good"]            # Lösungszeilen
+
+    @staticmethod
+    def dark() -> "Theme":
+        return Theme(**D.ANIM_DARK)
 
 
 @dataclass
@@ -345,7 +351,7 @@ def _pick_font() -> str | None:
         have = set(manimpango.list_fonts())
     except Exception:
         return None
-    for name in ("CMU Serif", "Latin Modern Roman", "STIX Two Text", "Georgia",
+    for name in ("EB Garamond", "CMU Serif", "Latin Modern Roman", "STIX Two Text", "Georgia",
                  "Times New Roman", "DejaVu Serif"):
         if name in have:
             return name
@@ -383,6 +389,26 @@ def _math_text(mod, Text):
         except Exception:                       # Zelle ist kein Formelsatz
             return Text(value, **kw)
     return tex
+
+
+def _calm(mod, base):
+    """Ruhigere Zeitkurve als Standard für alle play()-Aufrufe der Szene."""
+    def play(self, *a, **kw):
+        kw.setdefault("rate_func", mod.ease_in_out_sine)
+        return base.play(self, *a, **kw)
+    return play
+
+
+def _orbs(mod, theme):
+    """Sehr weiche Pastell-Orbs aus gestapelten, fast durchsichtigen Kreisen (statisch, billig)."""
+    group = mod.VGroup()
+    dark = theme.background.lower() == D.DARK
+    for x, y, r, col in ((4.6, 2.4, 3.2, D.LAVENDER), (-4.8, 2.8, 2.6, D.SKY),
+                         (5.4, -2.6, 2.4, D.PEACH), (0.5, 3.6, 2.2, D.MINT)):
+        for k in range(1, 25):
+            group.add(mod.Circle(radius=r * k / 24, stroke_width=0, fill_color=col,
+                                 fill_opacity=0.004 if dark else 0.0166).move_to([x, y, 0]))
+    return group
 
 
 def _build_scenes():
@@ -488,11 +514,13 @@ def _build_scenes():
 
     class GaussScene(Scene):
         """Gemeinsame Grundlage: Auftrag laden, Grössen wählen, Beschriftung."""
+        play = _calm(mod, Scene)
 
         def setup(self):
             self.job = AnimationJob.from_json(os.environ["LIALKIT_JOB"])
             self.theme = self.job.theme
             self.camera.background_color = self.theme.background
+            self.add(_orbs(mod, self.theme))
             cols = len(self.job.frames[0][0])
             rows = len(self.job.frames[0])
             # Mit mehr Spalten wird alles kleiner, damit nichts hinausläuft.
@@ -682,15 +710,18 @@ def _build_vector_scenes():
     import numpy as np
 
     #: Farben der einzelnen Vektoren, in dieser Reihenfolge vergeben.
-    PALETTE = ["#58c4dd", "#ffff00", "#83c167", "#fc6255"]
+    PALETTE = list(D.ANIM_VECTORS)
 
     class VectorScene(ThreeDScene):
         """Grundlage: Achsen, Vektoren, Beschriftung, Kamerafahrt."""
+        play = _calm(mod, ThreeDScene)
 
         def setup(self):
             self.job = AnimationJob.from_json(os.environ["LIALKIT_JOB"])
             self.theme = self.job.theme
             self.camera.background_color = self.theme.background
+            if self.theme.background.lower() == D.DARK:
+                PALETTE[:] = D.ANIM_VECTORS_DARK
             self.vecs = [np.array(v + [0.0] * (3 - len(v)), dtype=float)
                          for v in self.job.vectors]
             self.names = list(self.job.vector_labels)
@@ -916,6 +947,7 @@ def _build_map_scenes():
 
     class AbbildScene(Scene):
         """Gitter, Basisvektoren und Körper gehen von E zu A über."""
+        play = _calm(mod, Scene)
 
         def setup(self):
             self.job = AnimationJob.from_json(os.environ["LIALKIT_JOB"])
@@ -967,8 +999,8 @@ def _build_map_scenes():
 
             ident = lambda x, y: (x, y)                          # noqa: E731
             wirkung = lambda x, y: tuple(A @ np.array([x, y]) + t)   # noqa: E731
-            start = gitter(ident, th.muted, 1.4, 0.45)
-            ziel = gitter(wirkung, th.muted, 1.4, 0.45)
+            start = gitter(ident, th.muted, 1.1, 0.3)
+            ziel = gitter(wirkung, th.muted, 1.1, 0.3)
             koerper_0 = linie(P.T, th.accent, 5, schluss=True)
             koerper = linie(P.T, th.text, 4, schluss=True)
             koerper_1 = linie(bild.T, th.text, 4, schluss=True)
