@@ -7,14 +7,14 @@ darum muss ein Ordner `lialkit` (oder Symlink darauf) im Elternordner liegen / a
 
 ## Aufbau
 `rechnen/` Rechenkern (exakt mit Brüchen, Ergebnis-Klassen `*Result` mit `steps`/`highlights`),
-`grafik/` Matplotlib-Zeichnungen (`plots*.py`, Swiss-Style: Rot Original, Schwarz Bild) und Manim-Animationen (`anim.py`),
-`aufgaben/` Übungsaufgaben (`exercises.py`, Schlüssel `SW<n>.<aufgabe>`), `app/lialkit_qt.py` Fenster, `tests/` ein Skript je Modul.
+`grafik/` Matplotlib-Zeichnungen (`plots*.py`, Lavendel-Akzent Original, Tinte Bild) und Manim-Animationen (`anim.py`),
+`aufgaben/` Übungsaufgaben (`exercises.py`, Schlüssel `SW<n>.<aufgabe>`), `design.py` Tokens (Farben, Radien, Schriften: nur hier ändern), `app/lialkit_qt.py` Fenster, `tests/` ein Skript je Modul.
 
 ## Woche hinzufügen (Checkliste)
 1. Material lesen (Folien, Übungen, Lösungen, Notiz-md in `Week n/`). Mit Vorwoche per Textvergleich prüfen: manchmal ist der Stoff identisch (SW6 = SW5).
 2. Rechnen: neue Funktionen in `rechnen/<thema>.py` (Name deutsch, Docstring, Rückgabe `*Result` mit `Step`s, `decimal=`-Argument, keine Breaking Changes).
 3. Export: in `__init__.py` importieren, in `__all__`, in `info()` und im Modul-Docstring eintragen.
-4. Grafik/Animation: `grafik/plots_*.py` (Dekorator `@_swiss`), ggf. Szene in `grafik/anim.py`.
+4. Grafik/Animation: `grafik/plots_*.py` (Dekorator `@_swiss`, Farben aus `design.py`), ggf. Szene in `grafik/anim.py`.
 5. Aufgaben: in `aufgaben/exercises.py` als `Exercise("SW<n>.<x>", "SW<n>", ...)` mit Daten aus dem Blatt; `loese()` um neue `method` erweitern; Lösungen nur aus `lial-sw-0n-loesungen.pdf`, Unklares als TODO. Gibt es kein Blatt (SW7/SW8/SW9: nur Folien), nur die Fragen der Folien aufnehmen (Schlüssel `SW<n>.F<folie>`), im `note` als »keine Musterlösung vorhanden« kennzeichnen und nichts erfinden.
 6. App: Rechnung/Seite in `app/lialkit_qt.py` registrieren (z. B. `VECTOR_OPS`, `MAP_OPS`, Hilfedialog; neue Seite hinten an `seg_page`/`stack` anhängen und in den drei Schleifen über die Seiten nachtragen), bestehende Indizes nicht verschieben.
 7. Doku: README (Wochenzahl, Abschnitt, Fenster, »Geprüft gegen«, Tests), Docstring-Kopf `__init__.py`.

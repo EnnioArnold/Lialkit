@@ -18,7 +18,7 @@ pip install manimgx                  # Animationen, freiwillig (Python 3.13+)
 
 manimgx rendert auf der GPU und schreibt das MP4 ohne ffmpeg. Als Rückfall
 geht Manim CE (`brew install cairo pango pkg-config ffmpeg`, `pip install manim`).
-Die Videos kommen im Swiss-Design: Schwarz/Weiss mit rotem Akzent.
+Die Videos folgen dem App-Design: heller Canvas (oder Tinten-Grund im Dunkelmodus), Pastell-Akzente.
 
 Der Ordner `lialkit/` liegt neben deinen Wochen-Ordnern. Aus einem
 Notebook in `Week 3/` heraus:
@@ -58,7 +58,7 @@ lk.spiegelung_achse(30)                # Spiegelung an der Achse bei 30°
 lk.abbilden(lk.scherung(1), lk.BUCHSTABE_F_FOLIEN)   # Bildpunkte Q = A·P
 lk.zusammensetzen(A, B)                # erst A, dann B, also B·A
 lk.finde_abbildung([(0,0),(1,0),(1,1),(0,1),(0,0)])   # Matrix aus der Bildfigur
-lk.plot_abbildung(A)                   # Original rot, Bild schwarz
+lk.plot_abbildung(A)                   # Original Lavendel, Bild Tinte
 ```
 
 **SW6** behandelt denselben Stoff wie SW5 (gleiche Folien, gleiches Blatt, nur
@@ -204,8 +204,7 @@ pip install -r requirements.txt  # einmalig
 python3 app/lialkit_qt.py
 ```
 
-Der Ordnername ist egal. Das Fenster ist im Swiss-Design gehalten (Schwarz/Weiss,
-rotes Akzent, keine Rundungen), hell oder dunkel. Fünf Ansichten:
+Der Ordnername ist egal. Das Fenster ist hell oder dunkel (Design siehe unten). Fünf Ansichten:
 
 - **Gauss** — Elimination von Hand oder Schritt für Schritt, mit Animation
   und Prüfung über Wolfram|Alpha
@@ -273,6 +272,20 @@ Die Ergebnisse sind Zahl für Zahl mit `lial-sw-04-loesungen.pdf` verglichen
 worden: Determinanten und Inversen der Aufgaben 1 und 2, einschliesslich
 der beiden singulären Matrizen. Die LR-Zerlegungen aus SW3 sind über
 `L · R = P · A` und `A · x = b` nachgerechnet.
+
+## Design
+
+Alle Farben, Radien, Abstände und Schriften stehen in `design.py` (eine Stelle);
+App, Zeichnungen (Matplotlib) und Animationen (Manim) lesen daraus. Look: warmes
+Off-White (`#f5f5f5`) mit Tinte, weisse Karten mit Hairline und 16 px Radius,
+Pillen-Buttons, Pastell-Orbs nur als Atmosphäre; Dunkelmodus mit Tinten-Canvas
+`#0c0a09` und Karten `#1c1917`. Schriften: Inter für die Oberfläche, EB Garamond
+Light für Überschriften (Ersatz für Waldenburg); sie werden nur benutzt, wenn
+installiert, sonst Helvetica/Georgia. Es liegen keine Fontdateien im Repo.
+
+Quelle: getdesign.md, ElevenLabs DESIGN.md. Das ist eine unabhängige Analyse
+und Nachbildung der Gestaltungsprinzipien, kein Produkt von und nicht verbunden
+mit ElevenLabs.
 
 ## Tests
 
